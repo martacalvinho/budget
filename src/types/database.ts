@@ -12,15 +12,22 @@ export interface Database {
       users: {
         Row: {
           id: string
-          email: string
+          email: string | null
           name: string
           type: 'Adult' | 'Child'
           monthly_income: number
+          card_number: string | null
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Users['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Users['Insert']>
+        Insert: {
+          email?: string | null
+          name: string
+          type: 'Adult' | 'Child'
+          monthly_income: number
+          card_number?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['users']['Insert']>
       }
       salary_history: {
         Row: {
@@ -70,6 +77,23 @@ export interface Database {
         }
         Insert: Omit<Savings['Row'], 'id' | 'created_at'>
         Update: Partial<Savings['Insert']>
+      }
+      budgets: {
+        Row: {
+          id: string
+          category: string
+          amount: number
+          type: 'fixed' | 'flexible'
+          month: string
+          created_at: string
+        }
+        Insert: {
+          category: string
+          amount: number
+          type: 'fixed' | 'flexible'
+          month: string
+        }
+        Update: Partial<Database['public']['Tables']['budgets']['Insert']>
       }
     }
   }

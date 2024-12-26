@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Database } from '../types/database';
 import toast from 'react-hot-toast';
@@ -10,41 +10,29 @@ export function useCategories() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('categories')
-          .select('*')
-          .order('name');
+  const fetchCategories = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name')
+        .abortSignal(new AbortController().signal); // Force fresh data
 
-        if (error) throw error;
-        setCategories(data || []);
-      } catch (err) {
-        console.error('Error fetching categories:', err);
-        setError(err as Error);
-        toast.error('Failed to load categories');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCategories();
-
-    // Subscribe to realtime changes
-    const subscription = supabase
-      .channel('categories_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'categories' },
-        (payload) => {
-          fetchCategories(); // Refetch to ensure consistency
-      })
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+      setError(err as Error);
+      toast.error('Failed to load categories');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  return { categories, loading, error };
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  return { categories, loading, error, fetchCategories };
 }

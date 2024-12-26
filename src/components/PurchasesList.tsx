@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
 import { Trash2, Users, Split } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -9,7 +9,6 @@ import type { Database } from '../types/database';
 type Purchase = Database['public']['Tables']['purchases']['Row'];
 
 interface PurchasesListProps {
-  purchases: Purchase[];
   filters?: {
     date?: Date;
     categories?: string[];
@@ -17,8 +16,31 @@ interface PurchasesListProps {
   };
 }
 
-const PurchasesList: React.FC<PurchasesListProps> = ({ purchases, filters }) => {
+const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [loading, setLoading] = useState(true);
   const { users } = useUsers();
+
+  useEffect(() => {
+    fetchPurchases();
+  }, []);
+
+  const fetchPurchases = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('purchases')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+      setPurchases(data || []);
+    } catch (error) {
+      console.error('Error fetching purchases:', error);
+      toast.error('Failed to load purchases');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDelete = async (id: string) => {
     try {
@@ -28,6 +50,7 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ purchases, filters }) => 
         .eq('id', id);
 
       if (error) throw error;
+      setPurchases(purchases.filter(p => p.id !== id));
       toast.success('Purchase deleted successfully');
     } catch (error) {
       console.error('Error deleting purchase:', error);
@@ -87,6 +110,18 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ purchases, filters }) => 
     }
     return acc;
   }, {} as Record<string, Purchase & { users: string[] }>);
+
+  if (loading) {
+    return <div className="text-center py-4">Loading...</div>;
+  }
+
+  if (Object.keys(groupedPurchases).length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        No purchases found
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-x-auto">
@@ -159,12 +194,6 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ purchases, filters }) => 
             ))}
         </tbody>
       </table>
-
-      {Object.keys(groupedPurchases).length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          No purchases found
-        </div>
-      )}
     </div>
   );
 };

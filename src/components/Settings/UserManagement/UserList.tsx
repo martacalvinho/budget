@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, CreditCard, Wallet } from 'lucide-react';
 import type { Database } from '../../../types/database';
 
 type User = Database['public']['Tables']['users']['Row'];
@@ -17,54 +17,60 @@ const UserList: React.FC<UserListProps> = ({
   onDelete,
   onSelectSalaryHistory
 }) => {
-  const formatCurrency = (amount: number) => 
-    `€${amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}`;
-
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monthly Income</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {users.map((user) => (
-            <tr key={user.id}>
-              <td className="px-6 py-4 whitespace-nowrap">{user.name}</td>
-              <td className="px-6 py-4 whitespace-nowrap">{user.type}</td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                {formatCurrency(user.monthly_income)}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => onSelectSalaryHistory(user.id)}
-                    className="text-blue-600 hover:text-blue-900"
-                  >
-                    Salary History
-                  </button>
-                  <button
-                    onClick={() => onEdit(user)}
-                    className="text-blue-600 hover:text-blue-900"
-                  >
-                    <Pencil className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={() => onDelete(user.id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
+    <div className="space-y-4">
+      {users.map(user => (
+        <div
+          key={user.id}
+          className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+        >
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="font-medium">{user.name}</h3>
+              {user.card_number && (
+                <div className="flex items-center gap-1 text-sm text-gray-500">
+                  <CreditCard className="h-4 w-4" />
+                  {user.card_number}
                 </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              )}
+            </div>
+            <div className="text-sm text-gray-500 flex items-center gap-4">
+              <span>{user.type}</span>
+              {user.monthly_income > 0 && (
+                <span className="flex items-center gap-1">
+                  <Wallet className="h-4 w-4" />
+                  €{user.monthly_income.toLocaleString('de-DE', { minimumFractionDigits: 2 })}
+                </span>
+              )}
+              {user.email && <span>{user.email}</span>}
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onEdit(user)}
+              className="p-2 text-blue-600 hover:text-blue-800"
+              title="Edit user"
+            >
+              <Pencil className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => onSelectSalaryHistory(user.id)}
+              className="p-2 text-green-600 hover:text-green-800"
+              title="View salary history"
+            >
+              <Wallet className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => onDelete(user.id)}
+              className="p-2 text-red-600 hover:text-red-800"
+              title="Delete user"
+            >
+              <Trash2 className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 };

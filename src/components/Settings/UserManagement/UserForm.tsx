@@ -14,16 +14,18 @@ const UserForm: React.FC<UserFormProps> = ({ initialData, onSubmit }) => {
     name: initialData?.name ?? '',
     email: initialData?.email ?? '',
     type: initialData?.type ?? 'Adult',
-    monthly_income: initialData?.monthly_income ?? 0
+    monthly_income: initialData?.monthly_income ?? 0,
+    card_number: initialData?.card_number ?? ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Create a clean version of the data, omitting empty email
+    // Create a clean version of the data, omitting empty fields
     const cleanData = {
       ...formData,
-      email: formData.email.trim() || null
+      email: formData.email.trim() || null,
+      card_number: formData.card_number.trim() || null
     };
 
     await onSubmit(cleanData);
@@ -33,7 +35,8 @@ const UserForm: React.FC<UserFormProps> = ({ initialData, onSubmit }) => {
         name: '',
         email: '',
         type: 'Adult',
-        monthly_income: 0
+        monthly_income: 0,
+        card_number: ''
       });
     }
   };
@@ -67,7 +70,7 @@ const UserForm: React.FC<UserFormProps> = ({ initialData, onSubmit }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Type
@@ -95,11 +98,28 @@ const UserForm: React.FC<UserFormProps> = ({ initialData, onSubmit }) => {
             required
           />
         </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Card Number (Last 4 digits)
+          </label>
+          <input
+            type="text"
+            value={formData.card_number}
+            onChange={(e) => {
+              const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+              setFormData({ ...formData, card_number: value });
+            }}
+            className="w-full p-2 border rounded-md"
+            placeholder="e.g. 3840"
+            maxLength={4}
+            pattern="[0-9]{4}"
+          />
+        </div>
       </div>
 
       <button
         type="submit"
-        className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
       >
         {initialData ? 'Update User' : 'Add User'}
       </button>
