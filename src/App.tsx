@@ -11,6 +11,7 @@ import Settings from './components/Settings/Settings';
 import Login from './components/Auth/Login';
 import BudgetManagement from './components/Budget/BudgetManagement';
 import BankStatements from './components/BankStatements/BankStatements';
+import SavingsManagement from './components/Savings/SavingsManagement';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuthContext();
@@ -51,6 +52,16 @@ function App() {
                 <PrivateRoute>
                   <Layout>
                     <BudgetManagement />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/savings"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <SavingsManagement />
                   </Layout>
                 </PrivateRoute>
               }

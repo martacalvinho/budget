@@ -7,7 +7,8 @@ import {
   Settings,
   LogOut,
   PiggyBank,
-  FileText
+  FileText,
+  Coins
 } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 
@@ -21,6 +22,7 @@ export default function Sidebar() {
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/income', icon: Wallet, label: 'Income' },
     { path: '/budget', icon: PiggyBank, label: 'Budget' },
+    { path: '/savings', icon: Coins, label: 'Savings' },
     { path: '/analytics', icon: BarChart2, label: 'Analytics' },
     { path: '/statements', icon: FileText, label: 'Statements' },
     { path: '/settings', icon: Settings, label: 'Settings' },

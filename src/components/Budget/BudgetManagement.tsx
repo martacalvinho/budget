@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { format } from 'date-fns';
+import YearlyBudget from './YearlyBudget'; // Import the YearlyBudget component
 
 interface BudgetItem {
   id: string;
@@ -34,6 +35,7 @@ export default function BudgetManagement() {
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   const [copyLoading, setCopyLoading] = useState(false);
+  const [view, setView] = useState<'monthly' | 'yearly'>('monthly');
 
   const fetchSpendingData = async () => {
     try {
@@ -95,14 +97,63 @@ export default function BudgetManagement() {
 
         setIsTableCreated(true);
 
-        // Fetch budgets
-        const { data: budgetData, error: budgetError } = await supabase
-          .from('budgets')
-          .select('*')
-          .eq('month', selectedMonth);
+        // First try to get budget from yearly_budgets
+        const [year, month] = selectedMonth.split('-');
+        const monthName = new Date(parseInt(year), parseInt(month) - 1, 1)
+          .toLocaleString('default', { month: 'long' });
 
-        if (budgetError) throw budgetError;
-        setBudgets(budgetData || []);
+        const { data: yearlyData, error: yearlyError } = await supabase
+          .from('yearly_budgets')
+          .select('*')
+          .eq('year', year)
+          .eq('month', monthName);
+
+        // If we have yearly budget data, use it
+        if (!yearlyError && yearlyData && yearlyData.length > 0) {
+          const convertedBudgets = await Promise.all(yearlyData.map(async (yb) => {
+            // Check if a monthly budget already exists
+            const { data: existingBudget } = await supabase
+              .from('budgets')
+              .select('*')
+              .eq('month', selectedMonth)
+              .eq('category', yb.category)
+              .single();
+
+            if (existingBudget) {
+              return existingBudget;
+            }
+
+            // Create a new monthly budget based on yearly budget
+            const { data: newBudget, error: insertError } = await supabase
+              .from('budgets')
+              .insert({
+                category: yb.category,
+                amount: yb.amount,
+                type: categories.find(c => c.name === yb.category)?.type || 'flexible',
+                month: selectedMonth
+              })
+              .select()
+              .single();
+
+            if (insertError) {
+              console.error('Error creating monthly budget:', insertError);
+              return null;
+            }
+
+            return newBudget;
+          }));
+
+          setBudgets(convertedBudgets.filter(Boolean));
+        } else {
+          // Fallback to existing monthly budgets
+          const { data: budgetData, error: budgetError } = await supabase
+            .from('budgets')
+            .select('*')
+            .eq('month', selectedMonth);
+
+          if (budgetError) throw budgetError;
+          setBudgets(budgetData || []);
+        }
 
         // Fetch initial spending data
         await fetchSpendingData();
@@ -115,7 +166,7 @@ export default function BudgetManagement() {
     };
 
     fetchData();
-  }, [selectedMonth]);
+  }, [selectedMonth, categories]);
 
   // Set up real-time subscription for purchases
   useEffect(() => {
@@ -265,9 +316,9 @@ export default function BudgetManagement() {
   };
 
   const renderBudgetCard = (budget: BudgetItem) => {
-    const spent = spendingData[budget.category] || 0;
+    const spent = Math.abs(spendingData[budget.category] || 0);
     const percentage = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
-    const remaining = Math.max(budget.amount - spent, 0);
+    const remaining = budget.amount - spent;
     const isOverBudget = spent > budget.amount;
 
     return (
@@ -376,7 +427,7 @@ export default function BudgetManagement() {
   }
 
   const totalBudget = budgets.reduce((sum, b) => sum + b.amount, 0);
-  const totalSpent = Object.values(spendingData).reduce((sum, val) => sum + (val || 0), 0);
+  const totalSpent = Object.values(spendingData).reduce((sum, val) => sum + Math.abs(val || 0), 0);
   const totalRemaining = totalBudget - totalSpent;
 
   return (
@@ -386,61 +437,86 @@ export default function BudgetManagement() {
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold">Budget Management</h2>
           <div className="flex items-center gap-4">
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="px-3 py-2 border rounded-lg"
-            />
-            <button
-              onClick={() => setShowCopyModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
-            >
-              Copy Budget
-            </button>
+            <div className="flex rounded-md shadow-sm" role="group">
+              <button
+                onClick={() => setView('monthly')}
+                className={`px-4 py-2 text-sm font-medium rounded-l-lg border ${
+                  view === 'monthly'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setView('yearly')}
+                className={`px-4 py-2 text-sm font-medium rounded-r-lg border-t border-b border-r ${
+                  view === 'yearly'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                Yearly
+              </button>
+            </div>
+            {view === 'monthly' && (
+              <>
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="px-3 py-2 border rounded-lg"
+                />
+                <button
+                  onClick={() => setShowCopyModal(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
+                >
+                  Copy Budget
+                </button>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-blue-50 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-blue-700 font-medium">Total Budget</h3>
-              <TrendingUp className="h-5 w-5 text-blue-700" />
+        {view === 'monthly' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-blue-50 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-blue-700 font-medium">Total Budget</h3>
+                <TrendingUp className="h-5 w-5 text-blue-700" />
+              </div>
+              <p className="text-2xl font-bold text-blue-700 mt-2">
+                €{totalBudget.toFixed(2)}
+              </p>
             </div>
-            <p className="text-2xl font-bold text-blue-700 mt-2">
-              €{totalBudget.toFixed(2)}
-            </p>
-          </div>
 
-          <div className="bg-green-50 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-green-700 font-medium">Total Spent</h3>
-              <Target className="h-5 w-5 text-green-700" />
+            <div className="bg-green-50 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-green-700 font-medium">Total Spent</h3>
+                <Target className="h-5 w-5 text-green-700" />
+              </div>
+              <p className="text-2xl font-bold text-green-700 mt-2">
+                €{Object.values(spendingData).reduce((sum, val) => sum + Math.abs(val || 0), 0).toFixed(2)}
+              </p>
             </div>
-            <p className="text-2xl font-bold text-green-700 mt-2">
-              €{Object.values(spendingData).reduce((sum, val) => sum + (val || 0), 0).toFixed(2)}
-            </p>
-          </div>
 
-          <div className={`${totalRemaining >= 0 ? 'bg-blue-50' : 'bg-red-50'} rounded-lg p-4`}>
-            <div className="flex items-center justify-between">
-              <h3 className={`${totalRemaining >= 0 ? 'text-blue-700' : 'text-red-700'} font-medium`}>
-                Remaining
-              </h3>
-              <Bell className={`h-5 w-5 ${totalRemaining >= 0 ? 'text-blue-700' : 'text-red-700'}`} />
+            <div className={`${totalRemaining >= 0 ? 'bg-blue-50' : 'bg-red-50'} rounded-lg p-4`}>
+              <div className="flex items-center justify-between">
+                <h3 className={`${totalRemaining >= 0 ? 'text-blue-700' : 'text-red-700'} font-medium`}>
+                  Remaining
+                </h3>
+                <Bell className={`h-5 w-5 ${totalRemaining >= 0 ? 'text-blue-700' : 'text-red-700'}`} />
+              </div>
+              <p className={`text-2xl font-bold ${totalRemaining >= 0 ? 'text-blue-700' : 'text-red-700'} mt-2`}>
+                €{Math.abs(totalRemaining).toFixed(2)}
+                {totalRemaining < 0 && ' over budget'}
+              </p>
             </div>
-            <p className={`text-2xl font-bold ${totalRemaining >= 0 ? 'text-blue-700' : 'text-red-700'} mt-2`}>
-              €{Math.abs(totalRemaining).toFixed(2)}
-              {totalRemaining < 0 && ' over budget'}
-            </p>
           </div>
-        </div>
+        )}
       </div>
 
-      {loading ? (
-        <div className="text-center py-4">Loading...</div>
-      ) : (
+      {view === 'monthly' ? (
         <div className="space-y-8">
           {/* Fixed Expenses */}
           <div>
@@ -504,7 +580,10 @@ export default function BudgetManagement() {
             </div>
           </div>
         </div>
+      ) : (
+        <YearlyBudget year={selectedMonth.slice(0, 4)} />
       )}
+
       {/* Copy Budget Modal */}
       {showCopyModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

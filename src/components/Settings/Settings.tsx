@@ -1,6 +1,7 @@
 import React from 'react';
 import CategoryManagement from './CategoryManagement';
 import UserManagement from './UserManagement';
+import UserSharing from './UserSharing';
 
 export default function Settings() {
   return (
@@ -10,6 +11,11 @@ export default function Settings() {
       {/* User Management Section */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <UserManagement />
+      </div>
+
+      {/* User Sharing Section */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <UserSharing />
       </div>
 
       {/* Category Management Sections */}
