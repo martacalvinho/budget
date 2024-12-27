@@ -44,7 +44,8 @@ const AddPurchasePopup: React.FC<AddPurchasePopupProps> = ({
     }
 
     try {
-      const amount = parseFloat(formData.amount);
+      // Convert amount to negative since it's a purchase (money spent)
+      const amount = -Math.abs(parseFloat(formData.amount));
       const splitAmount = amount / formData.userIds.length;
 
       // Create purchases for each user
@@ -57,7 +58,7 @@ const AddPurchasePopup: React.FC<AddPurchasePopupProps> = ({
             category: formData.category,
             description: formData.description,
             date: formData.date,
-            total_amount: amount,
+            total_amount: Math.abs(amount), // Keep total_amount positive for legacy reasons
             split_between: formData.userIds.length
           }))
         );

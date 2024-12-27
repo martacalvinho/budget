@@ -68,14 +68,22 @@ const TransactionCategorizer: React.FC<TransactionCategorizerProps> = ({
         )}
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
-        <span className={`text-sm font-medium ${amount < 0 ? 'text-red-600' : 'text-green-600'}`}>
-          €{Math.abs(amount).toFixed(2)}
-        </span>
-        {isSplit && (
-          <p className="text-xs text-gray-500">
-            €{(Math.abs(amount) / selectedUsers.length).toFixed(2)} per person
-          </p>
-        )}
+        <div className="flex items-center gap-2">
+          <span className={`text-lg font-semibold ${
+            transaction.description.startsWith('PT61114457 MGAM') ? 'text-blue-600' :
+            transaction.credit ? 'text-green-600' : 'text-red-600'
+          }`}>
+            {transaction.credit ? 
+              `€${transaction.credit}` : 
+              `€${transaction.debit}`
+            }
+          </span>
+          {isSplit && (
+            <p className="text-xs text-gray-500">
+              €{(Math.abs(amount) / selectedUsers.length).toFixed(2)} per person
+            </p>
+          )}
+        </div>
       </td>
       <td className="px-6 py-4">
         <div className="flex flex-wrap gap-1">

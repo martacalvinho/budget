@@ -52,7 +52,9 @@ export default function BankStatements() {
 
   const handleSaveTransaction = async (transaction: ParsedTransaction) => {
     try {
-      const totalAmount = transaction.debit || -(transaction.credit || 0);
+      // If it's a debit (money going out), make it negative
+      // If it's a credit (money coming in), keep it positive
+      const totalAmount = transaction.credit || -(transaction.debit || 0);
       const splitAmount = totalAmount / (transaction.users?.length || 1);
       
       // Format date correctly for database (YYYY-MM-DD)

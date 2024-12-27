@@ -59,31 +59,102 @@ export async function parseBankStatement(arrayBuffer: ArrayBuffer): Promise<Pars
   };
 
   // Helper function to parse transaction line
+  const TRANSACTION_REGEX = /(\d{2}\.\d{2})\s+(\d{2}\.\d{2})\s+(COMPRA|TRF|DD|PAG)\s+(.+?)\s+(\d+[.,]\d{2})\s+\d+\s+(\d+[.,]\d{2})\s*$/;
   const parseTransactionLine = (line: string): ParsedTransaction | null => {
-    // Example: 11.01 11.01 COMPRA 3840 FUNKY CHUNKY COOKIES LI CONTACTLESS 3.00 21 772.41
-    const regex = /(\d{2}\.\d{2})\s+(\d{2}\.\d{2})\s+(COMPRA|TRF|DD|PAG)\s+(.+?)\s+(\d+[.,]\d{2})\s+\d+\s+(\d+[.,]\d{2})\s*$/;
-    const match = line.match(regex);
-    
+    const match = line.match(TRANSACTION_REGEX);
     if (!match) return null;
 
     const [_, dateRemoved, dateOfPurchase, type, descriptionRaw, amountStr, balanceStr] = match;
+    console.log('Parsing line:', {
+      type,
+      descriptionRaw,
+      amountStr,
+      balanceStr
+    });
+
     const { cardNumber, users } = extractCardAndUsers(descriptionRaw);
-    
-    // Determine if amount is debit or credit based on transaction type
     const amount = parseAmount(amountStr);
     const balance = parseAmount(balanceStr);
+
+    // Normalize the description to handle multiple spaces
+    const normalizedDesc = descriptionRaw.replace(/\s+/g, ' ').trim();
+
+    // For MBWAY P/, convert the amount to negative since it's a payment
+    if (normalizedDesc.includes('MB WAY P/')) {
+      console.log('Found MBWAY payment, setting as debit:', amount);
+      return {
+        dateRemoved,
+        dateOfPurchase,
+        description: descriptionRaw.trim(),
+        debit: amount,
+        credit: undefined,
+        balance,
+        users,
+        cardNumber,
+        statementYear
+      };
+    }
+
+    // For MBWAY DE, keep as positive since it's money received
+    if (normalizedDesc.includes('MB WAY DE')) {
+      console.log('Found MBWAY income, setting as credit:', amount);
+      return {
+        dateRemoved,
+        dateOfPurchase,
+        description: descriptionRaw.trim(),
+        debit: undefined,
+        credit: amount,
+        balance,
+        users,
+        cardNumber,
+        statementYear
+      };
+    }
+
+    // Handle savings transfers
+    if (normalizedDesc.startsWith('PT61114457 MGAM')) {
+      console.log('Found savings transfer:', amount);
+      return {
+        dateRemoved,
+        dateOfPurchase,
+        description: descriptionRaw.trim(),
+        debit: amount,  // Mark as debit since it's money moving to savings
+        credit: undefined,
+        balance,
+        users,
+        cardNumber,
+        category: 'Savings',  // Auto-categorize as savings
+        statementYear
+      };
+    }
+
+    // Handle rent payments (always debit)
+    if (normalizedDesc.includes('PT96113730 MG')) {
+      console.log('Found rent payment, setting as debit:', amount);
+      return {
+        dateRemoved,
+        dateOfPurchase,
+        description: descriptionRaw.trim(),
+        debit: amount,
+        credit: undefined,
+        balance,
+        users,
+        cardNumber,
+        statementYear
+      };
+    }
+
+    // Handle other transactions normally
     const isDebit = type === 'COMPRA' || type === 'PAG';
-    
     return {
       dateRemoved,
       dateOfPurchase,
-      type: type as ParsedTransaction['type'],
-      cardNumber,
       description: descriptionRaw.trim(),
       debit: isDebit ? amount : undefined,
       credit: !isDebit ? amount : undefined,
       balance,
       users,
+      cardNumber,
       statementYear
     };
   };

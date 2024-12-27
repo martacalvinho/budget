@@ -136,7 +136,7 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
 
   // Group purchases by their unique identifiers
   const groupedPurchases = filteredPurchases.reduce((acc, purchase) => {
-    const key = `${purchase.date}-${purchase.category}-${purchase.total_amount || purchase.amount}-${purchase.description || ''}`;
+    const key = `${purchase.date}-${purchase.category}-${purchase.amount}-${purchase.description || ''}`;
     
     if (!acc[key]) {
       acc[key] = {
@@ -148,6 +148,19 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
     }
     return acc;
   }, {} as Record<string, Purchase & { users: string[] }>);
+
+  // Calculate totals
+  const totals = Object.values(groupedPurchases).reduce((acc, purchase) => {
+    const amount = parseFloat(purchase.amount.toString());
+    if (amount >= 0) {
+      acc.received += amount;
+    } else {
+      acc.sent += Math.abs(amount);
+    }
+    return acc;
+  }, { received: 0, sent: 0 });
+
+  const netAmount = totals.received - totals.sent;
 
   if (loading) {
     return <div className="text-center py-4">Loading...</div>;
@@ -163,6 +176,27 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
 
   return (
     <div className="overflow-x-auto">
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-4">
+          <h2 className="text-2xl font-bold">Recent Purchases</h2>
+        </div>
+        <div className="flex items-center gap-6 mr-4">
+          <div className="flex flex-col items-end">
+            <span className="text-sm text-gray-500">Total Received</span>
+            <span className="text-lg font-semibold text-green-600">+€{totals.received.toFixed(2)}</span>
+          </div>
+          <div className="flex flex-col items-end">
+            <span className="text-sm text-gray-500">Total Sent</span>
+            <span className="text-lg font-semibold text-red-600">-€{Math.abs(totals.sent).toFixed(2)}</span>
+          </div>
+          <div className="flex flex-col items-end">
+            <span className="text-sm text-gray-500">Net Amount</span>
+            <span className={`text-lg font-semibold ${netAmount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {netAmount >= 0 ? '+' : ''}{netAmount.toFixed(2)}
+            </span>
+          </div>
+        </div>
+      </div>
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
@@ -170,8 +204,8 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Users</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
@@ -208,19 +242,21 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {purchase.description || '-'}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <div className="flex flex-col">
-                    <span className="font-medium text-gray-900">
-                      €{(purchase.total_amount || purchase.amount).toLocaleString('de-DE', { minimumFractionDigits: 2 })}
+                <td className="px-6 py-4 whitespace-nowrap text-right">
+                  <div className="flex flex-col items-end">
+                    <span className={`text-sm font-semibold ${
+                      purchase.amount >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {purchase.amount >= 0 ? '+' : '-'}€{Math.abs(purchase.amount).toFixed(2)}
                     </span>
                     {purchase.users.length > 1 && (
                       <span className="text-xs text-gray-500">
-                        €{(purchase.amount).toLocaleString('de-DE', { minimumFractionDigits: 2 })} per person
+                        €{Math.abs(purchase.amount).toFixed(2)} per person
                       </span>
                     )}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                   <button
                     onClick={() => handleDelete(purchase.id)}
                     className="text-red-600 hover:text-red-900"
