@@ -170,16 +170,19 @@ export default function Income() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
+
+      const incomeData = {
+        ...formData,
+        amount: parseFloat(formData.amount),
+        user_id: user.id
+      };
+
       if (editingId) {
         const { error } = await supabase
           .from('extra_income')
-          .update({
-            from_person: formData.from_person,
-            description: formData.description,
-            amount: parseFloat(formData.amount),
-            date: formData.date,
-            recurring: formData.recurring
-          })
+          .update(incomeData)
           .eq('id', editingId);
 
         if (error) throw error;
@@ -187,13 +190,7 @@ export default function Income() {
       } else {
         const { error } = await supabase
           .from('extra_income')
-          .insert({
-            from_person: formData.from_person,
-            description: formData.description,
-            amount: parseFloat(formData.amount),
-            date: formData.date,
-            recurring: formData.recurring
-          });
+          .insert([incomeData]);
 
         if (error) throw error;
         toast.success('Income added successfully');
@@ -201,7 +198,13 @@ export default function Income() {
 
       setShowAddForm(false);
       setEditingId(null);
-      setFormData({ from_person: '', description: '', amount: '', date: '', recurring: false });
+      setFormData({
+        from_person: '',
+        description: '',
+        amount: '',
+        date: '',
+        recurring: false
+      });
       fetchIncomes();
     } catch (error) {
       console.error('Error saving income:', error);

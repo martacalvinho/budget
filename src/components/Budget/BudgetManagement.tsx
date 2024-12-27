@@ -5,6 +5,7 @@ import { Edit2, Save, Plus, AlertCircle, TrendingUp, Target, Bell, X } from 'luc
 import toast from 'react-hot-toast';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
+import { format } from 'date-fns';
 
 interface BudgetItem {
   id: string;
@@ -36,28 +37,38 @@ export default function BudgetManagement() {
 
   const fetchSpendingData = async () => {
     try {
-      const startDate = new Date(selectedMonth + '-01');
-      const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+      // Parse the selected month (format: "YYYY-MM")
+      const [year, month] = selectedMonth.split('-');
+      const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+      const endDate = new Date(parseInt(year), parseInt(month), 0);
       
+      const startStr = format(startDate, 'yyyy-MM-dd');
+      const endStr = format(endDate, 'yyyy-MM-dd');
+      
+      console.log('Fetching budget spending for:', {
+        selectedMonth,
+        startStr,
+        endStr
+      });
+
       const { data: purchaseData, error: purchaseError } = await supabase
         .from('purchases')
         .select('amount, category')
-        .gte('date', startDate.toISOString().split('T')[0])
-        .lte('date', endDate.toISOString().split('T')[0]);
+        .gte('date', startStr)
+        .lte('date', endStr);
 
       if (purchaseError) throw purchaseError;
 
+      console.log('Budget purchase data:', purchaseData);
+
       // Calculate spending by category
       const spending = purchaseData?.reduce((acc: SpendingData, purchase) => {
-        if (purchase.category) {
-          // Use the amount (which is already split per user)
-          acc[purchase.category] = (acc[purchase.category] || 0) + purchase.amount;
-        }
+        const category = purchase.category;
+        acc[category] = (acc[category] || 0) + Number(purchase.amount);
         return acc;
       }, {});
 
-      console.log('Raw purchase data:', purchaseData); // Debug log
-      console.log('Calculated spending:', spending); // Debug log
+      console.log('Calculated spending:', spending);
       setSpendingData(spending || {});
     } catch (error) {
       console.error('Error fetching spending data:', error);

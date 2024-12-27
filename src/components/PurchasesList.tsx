@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { Trash2, Users, Split } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -22,17 +22,55 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
   const { users } = useUsers();
 
   useEffect(() => {
+    console.log('Filter date changed:', filters?.date);
     fetchPurchases();
-  }, []);
+  }, [filters?.date]); // Refetch when month changes
 
   const fetchPurchases = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('purchases')
-        .select('*')
-        .order('date', { ascending: false });
+        .select('*');
+
+      // Apply date filter if present
+      if (filters?.date) {
+        // Set the date to the first of the selected month to ensure correct month filtering
+        const filterDate = new Date(filters.date.getFullYear(), filters.date.getMonth(), 1);
+        const start = startOfMonth(filterDate);
+        const end = endOfMonth(filterDate);
+        const startStr = format(start, 'yyyy-MM-dd');
+        const endStr = format(end, 'yyyy-MM-dd');
+        
+        console.log('Fetching purchases for date range:', {
+          originalDate: filters.date,
+          filterDate,
+          startStr,
+          endStr,
+          filterMonth: filterDate.getMonth() + 1,
+          filterYear: filterDate.getFullYear()
+        });
+
+        // Debug query
+        const { data: debugData } = await query
+          .gte('date', startStr)
+          .lte('date', endStr);
+        
+        console.log('Debug - Raw query results:', debugData);
+
+        query = query
+          .gte('date', startStr)
+          .lte('date', endStr);
+      }
+
+      const { data, error } = await query.order('date', { ascending: false });
 
       if (error) throw error;
+      console.log('Fetched purchases:', data?.map(p => ({
+        id: p.id,
+        date: p.date,
+        amount: p.amount,
+        description: p.description
+      })));
       setPurchases(data || []);
     } catch (error) {
       console.error('Error fetching purchases:', error);

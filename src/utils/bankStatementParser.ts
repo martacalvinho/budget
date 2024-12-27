@@ -3,14 +3,24 @@ import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 // Set worker source directly
 GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
 
-interface ParsedTransaction {
-  date: string;
-  type: string;
+export interface ParsedTransaction {
+  dateRemoved: string;
+  dateOfPurchase: string;
+  type: 'COMPRA' | 'TRF' | 'DD' | 'PAG';
   cardNumber?: string;
   description: string;
-  amount: number;
+  debit?: number;
+  credit?: number;
   balance: number;
+  users?: string[];
+  category?: string;
+  statementYear?: string;
 }
+
+const CARD_NUMBERS = {
+  '3840': 'user1',
+  '0363': 'user2'
+};
 
 export async function parseBankStatement(arrayBuffer: ArrayBuffer): Promise<ParsedTransaction[]> {
   console.log('Starting PDF parsing...');
@@ -19,13 +29,63 @@ export async function parseBankStatement(arrayBuffer: ArrayBuffer): Promise<Pars
   const pdf = await loadingTask.promise;
   console.log(`PDF loaded with ${pdf.numPages} pages`);
 
-  const transactions: ParsedTransaction[] = [];
+  // Extract statement date range
+  const page = await pdf.getPage(1);
+  const textContent = await page.getTextContent();
+  const text = textContent.items.map((item: any) => item.str).join(' ');
+  const dateRangeMatch = text.match(/EXTRATO DE (\d{4})\/\d{2}\/\d{2}/);
+  const statementYear = dateRangeMatch ? dateRangeMatch[1] : new Date().getFullYear().toString();
+
+  let transactions: ParsedTransaction[] = [];
 
   // Helper function to parse amount strings
   const parseAmount = (amountStr: string): number => {
     // Remove any spaces and replace comma with dot
     const normalized = amountStr.replace(/\s+/g, '').replace(',', '.');
     return parseFloat(normalized);
+  };
+
+  // Helper function to extract card number and assign users
+  const extractCardAndUsers = (description: string): { cardNumber?: string; users: string[] } => {
+    const cardMatch = description.match(/\b(3840|0363)\b/);
+    if (!cardMatch) return { users: [] };
+    
+    const cardNumber = cardMatch[1];
+    const user = CARD_NUMBERS[cardNumber as keyof typeof CARD_NUMBERS];
+    return {
+      cardNumber,
+      users: user ? [user] : []
+    };
+  };
+
+  // Helper function to parse transaction line
+  const parseTransactionLine = (line: string): ParsedTransaction | null => {
+    // Example: 11.01 11.01 COMPRA 3840 FUNKY CHUNKY COOKIES LI CONTACTLESS 3.00 21 772.41
+    const regex = /(\d{2}\.\d{2})\s+(\d{2}\.\d{2})\s+(COMPRA|TRF|DD|PAG)\s+(.+?)\s+(\d+[.,]\d{2})\s+\d+\s+(\d+[.,]\d{2})\s*$/;
+    const match = line.match(regex);
+    
+    if (!match) return null;
+
+    const [_, dateRemoved, dateOfPurchase, type, descriptionRaw, amountStr, balanceStr] = match;
+    const { cardNumber, users } = extractCardAndUsers(descriptionRaw);
+    
+    // Determine if amount is debit or credit based on transaction type
+    const amount = parseAmount(amountStr);
+    const balance = parseAmount(balanceStr);
+    const isDebit = type === 'COMPRA' || type === 'PAG';
+    
+    return {
+      dateRemoved,
+      dateOfPurchase,
+      type: type as ParsedTransaction['type'],
+      cardNumber,
+      description: descriptionRaw.trim(),
+      debit: isDebit ? amount : undefined,
+      credit: !isDebit ? amount : undefined,
+      balance,
+      users,
+      statementYear
+    };
   };
 
   // Extract text from each page
@@ -45,129 +105,46 @@ export async function parseBankStatement(arrayBuffer: ArrayBuffer): Promise<Pars
         return b.y - a.y;
       });
 
-    // Combine items into lines
+    // Process each line
     let currentLine = '';
     let lastY = null;
-    let lines: string[] = [];
-
+    
     for (const item of sortedItems) {
-      if (lastY === null || Math.abs(item.y - lastY) < 2) {
-        currentLine += (currentLine ? ' ' : '') + item.str;
-      } else {
-        if (currentLine) lines.push(currentLine);
-        currentLine = item.str;
+      if (lastY !== null && Math.abs(item.y - lastY) > 2) {
+        // Process completed line
+        const transaction = parseTransactionLine(currentLine);
+        if (transaction) {
+          transactions.push(transaction);
+        }
+        currentLine = '';
       }
+      
+      currentLine += (currentLine ? ' ' : '') + item.str;
       lastY = item.y;
     }
-    if (currentLine) lines.push(currentLine);
-
-    // Process each line
-    let isTransactionSection = false;
-    for (const line of lines) {
-      // Check for transaction section header
-      if (line.includes('DESCRITIVO') && line.includes('DEBITO') && line.includes('CREDITO') && line.includes('SALDO')) {
-        isTransactionSection = true;
-        continue;
-      }
-
-      // Skip if not in transaction section or if it's a header/footer line
-      if (!isTransactionSection || 
-          line.includes('SALDO INICIAL') || 
-          line.includes('SALDO FINAL') || 
-          line.includes('A TRANSPORTAR') ||
-          line.includes('TRANSPORTE') ||
-          !line.trim()) {
-        continue;
-      }
-
-      try {
-        // Match date pattern at start of line (DD.DD DD.DD)
-        const dateMatch = line.match(/^(\d{2}\.\d{2})\s+(\d{2}\.\d{2})/);
-        if (!dateMatch) continue;
-
-        // Extract transaction components
-        const parts = line.split(/\s+/);
-        const date = parts[1]; // Use value date
-        
-        // Find transaction type and description
-        let type = 'OUTROS';
-        let description = '';
-        let cardNumber: string | undefined;
-
-        // Look for transaction type keywords
-        if (line.includes('COMPRA')) {
-          type = 'COMPRA';
-          const cardMatch = parts.find(p => /^\d{4}$/.test(p));
-          if (cardMatch) cardNumber = cardMatch;
-        } else if (line.includes('TRF')) {
-          type = 'TRF';
-        } else if (line.includes('DD')) {
-          type = 'DD';
-        } else if (line.includes('PAG')) {
-          type = 'PAG';
-        }
-
-        // Extract description (everything between type and amounts)
-        const typeIndex = parts.findIndex(p => p === type);
-        description = parts.slice(typeIndex + 1)
-          .filter(p => {
-            // Don't include numbers that look like amounts or dates
-            return !/^\d+(?:\s*\d{3})*(?:[.,]\d{2})?$/.test(p) && !/^\d{2}\.\d{2}$/.test(p);
-          })
-          .join(' ')
-          .replace(/CONTACTLESS$/, '')
-          .trim();
-
-        // Find amounts by looking for numbers in the correct positions
-        // We specifically look for numbers that have exactly 2 decimal places
-        const numbers = line.match(/\d+(?:\s*\d{3})*,\d{2}(?!\d)/g) || [];
-        console.log('Found numbers in line:', numbers);
-
-        if (numbers.length > 0) {
-          // The last number is always the balance
-          const balance = parseAmount(numbers[numbers.length - 1]);
-          
-          // For transactions, look at the position of numbers in the DEBITO/CREDITO columns
-          let amount = 0;
-          
-          if (type === 'COMPRA' || type === 'DD') {
-            // For purchases and direct debits, look in the DEBITO column
-            // The debit amount should be in the middle of the line, not at the start
-            const debitAmount = numbers.find((num, index) => {
-              // Skip the first few numbers (dates) and the last number (balance)
-              return index > 0 && index < numbers.length - 1;
-            });
-            if (debitAmount) {
-              amount = -parseAmount(debitAmount);
-            }
-          } else if (type === 'TRF' || type === 'PAG') {
-            // For transfers and payments, check both DEBITO and CREDITO columns
-            if (numbers.length > 1) {
-              const amountStr = numbers[numbers.length - 2];
-              amount = line.includes('DEBITO') ? -parseAmount(amountStr) : parseAmount(amountStr);
-            }
-          }
-
-          transactions.push({
-            date,
-            type,
-            cardNumber,
-            description,
-            amount,
-            balance
-          });
-        }
-      } catch (error) {
-        console.error('Error processing line:', error);
+    
+    // Process last line
+    if (currentLine) {
+      const transaction = parseTransactionLine(currentLine);
+      if (transaction) {
+        transactions.push(transaction);
       }
     }
   }
 
-  console.log(`Found ${transactions.length} transactions`);
-  return transactions.sort((a, b) => {
-    const [dayA, monthA] = a.date.split('.');
-    const [dayB, monthB] = b.date.split('.');
-    return new Date(2024, parseInt(monthA) - 1, parseInt(dayA)).getTime() -
-           new Date(2024, parseInt(monthB) - 1, parseInt(dayB)).getTime();
-  });
+  // Update balances (assuming they're in reverse chronological order)
+  let currentBalance = transactions[0]?.balance || 0;
+  for (let i = 1; i < transactions.length; i++) {
+    const tx = transactions[i];
+    if (tx.debit) {
+      currentBalance -= tx.debit;
+    }
+    if (tx.credit) {
+      currentBalance += tx.credit;
+    }
+    transactions[i].balance = currentBalance;
+  }
+
+  console.log('Parsed transactions:', transactions);
+  return transactions;
 }
