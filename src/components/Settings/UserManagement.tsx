@@ -9,12 +9,14 @@ import UserList from './UserManagement/UserList';
 import UserForm from './UserManagement/UserForm';
 
 type User = Database['public']['Tables']['users']['Row'];
-type UserInsert = Database['public']['Tables']['users']['Insert'];
+type UserInsert = Database['public']['Tables']['users']['Insert']
 
 const UserManagement: React.FC = () => {
   const { users, loading, refreshUsers } = useUsers();
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  console.log('UserManagement render:', { users, loading });
 
   const handleAddUser = async (userData: UserInsert) => {
     try {

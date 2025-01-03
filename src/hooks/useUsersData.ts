@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import type { Database } from '../types/database';
 import toast from 'react-hot-toast';
 
-type User = Database['public']['Tables']['users']['Row'];
+type User = Database['public']['Tables']['users']['Row']
 
 export function useUsersData() {
   const [users, setUsers] = useState<User[]>([]);
@@ -13,12 +13,14 @@ export function useUsersData() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
+        console.log('Fetching users...');
         const { data, error } = await supabase
           .from('users')
           .select('*')
           .order('name');
 
         if (error) throw error;
+        console.log('Fetched users:', data);
         setUsers(data || []);
       } catch (err) {
         console.error('Error fetching users:', err);
