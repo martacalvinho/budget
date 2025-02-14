@@ -1,400 +1,449 @@
 import React, { useState, useEffect } from 'react';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell
-} from 'recharts';
 import { supabase } from '../../lib/supabase';
-import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
-import { TrendingUp, TrendingDown, DollarSign, PiggyBank } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { useUsers } from '../../contexts/UserContext';
+import { CategoryBreakdown } from './CategoryBreakdown';
+import { TimeAnalysis } from './TimeAnalysis';
+import { UserBehavior } from './UserBehavior';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
-
-interface MonthlyData {
-  month: string;
-  income: number;
-  expenses: number;
-  savings: number;
+interface UserSpending {
+  userId: string;
+  userName: string;
+  totalSpent: number;
+  categoryBreakdown: { [key: string]: number };
+  highestCategory: {
+    category: string;
+    amount: number;
+  };
 }
 
-interface CategorySpending {
-  category: string;
-  amount: number;
-  budgeted: number;
-  percentage: number;
+interface TotalStats {
+  totalIncome: number;
+  totalExpenses: number;
+  totalBudgeted: number;
+  totalSpent: number;
 }
+
+const UserSpendingDetails: React.FC<{ user: UserSpending }> = ({ user }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm p-4">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between text-left"
+      >
+        <div>
+          <h3 className="text-lg font-medium">{user.userName}</h3>
+          <p className="text-2xl font-bold">${Math.abs(user.totalSpent).toFixed(2)}</p>
+        </div>
+        {isOpen ? (
+          <ChevronUp className="w-5 h-5 text-gray-500" />
+        ) : (
+          <ChevronDown className="w-5 h-5 text-gray-500" />
+        )}
+      </button>
+      
+      {isOpen && (
+        <div className="mt-4 space-y-2">
+          {Object.entries(user.categoryBreakdown)
+            .sort(([, a], [, b]) => Math.abs(b) - Math.abs(a))
+            .map(([category, amount]) => (
+              <div key={category} className="flex justify-between items-center py-1">
+                <span className="text-gray-600">{category}</span>
+                <span className="font-medium">${Math.abs(amount).toFixed(2)}</span>
+              </div>
+            ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function Analytics() {
-  const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
-  const [categorySpending, setCategorySpending] = useState<CategorySpending[]>([]);
-  const [loading, setLoading] = useState(true);
   const { users } = useUsers();
-  const [currentMonthStats, setCurrentMonthStats] = useState({
-    expenses: 0,
-    prevExpenses: 0,
-    income: 0,
-    prevIncome: 0,
-    budgetUsed: 0,
-    savingsRate: 0
+  const [loading, setLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [selectedUser, setSelectedUser] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [userSpending, setUserSpending] = useState<UserSpending[]>([]);
+  const [categoryData, setCategoryData] = useState<any[]>([]);
+  const [totalStats, setTotalStats] = useState<TotalStats>({
+    totalIncome: 0,
+    totalExpenses: 0,
+    totalBudgeted: 0,
+    totalSpent: 0
   });
+  const [topSpender, setTopSpender] = useState<UserSpending | null>(null);
+  const [timeAnalysisData, setTimeAnalysisData] = useState<any[]>([]);
+  const [userBehaviorData, setUserBehaviorData] = useState<any[]>([]);
 
   useEffect(() => {
     if (users.length > 0) {
       fetchData();
+      fetchHistoricalData();
     }
-  }, [users]);
+  }, [users, selectedMonth]);
 
   const fetchData = async () => {
     try {
-      // Get the first user (assuming this is the main user)
-      const user = users[0];
-      if (!user) throw new Error('No user found');
+      setLoading(true);
+      const startDate = startOfMonth(selectedMonth);
+      const endDate = endOfMonth(selectedMonth);
 
-      console.log('Current user:', user.id); // Debug log
-
-      const currentDate = new Date();
-      const currentMonth = startOfMonth(currentDate);
-      const prevMonth = startOfMonth(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
-
-      // Get current month's expenses from Dashboard (purchases table)
-      const { data: currentMonthExpenses, error: expensesError } = await supabase
-        .from('purchases')
-        .select('amount, date')
-        .gte('date', currentMonth.toISOString())
-        .lte('date', endOfMonth(currentDate).toISOString())
-        .eq('user_id', user.id);
-
-      console.log('Current month expenses:', currentMonthExpenses, 'Error:', expensesError); // Debug log
-
-      const { data: prevMonthExpenses, error: prevExpensesError } = await supabase
-        .from('purchases')
-        .select('amount, date')
-        .gte('date', prevMonth.toISOString())
-        .lte('date', endOfMonth(prevMonth).toISOString())
-        .eq('user_id', user.id);
-
-      console.log('Previous month expenses:', prevMonthExpenses, 'Error:', prevExpensesError); // Debug log
-
-      // Get income from Income tab (users table)
-      const { data: baseIncome, error: baseIncomeError } = await supabase
+      // Get users and their base income
+      const { data: users } = await supabase
         .from('users')
-        .select('monthly_income')
-        .eq('id', user.id)
-        .single();
+        .select('id, monthly_income');
 
-      console.log('Base income:', baseIncome, 'Error:', baseIncomeError);
-
-      // Get monthly income overrides from monthly_income_overrides table
-      const { data: incomeOverride, error: overrideError } = await supabase
+      // Get monthly overrides for the specific month
+      const { data: monthlyOverrides } = await supabase
         .from('monthly_income_overrides')
+        .select('*')
+        .eq('month', format(selectedMonth, 'yyyy-MM'));
+
+      // Get extra income for the month
+      const { data: extraIncomes } = await supabase
+        .from('extra_income')
         .select('amount')
-        .eq('user_id', user.id)
-        .eq('month', format(currentDate, 'yyyy-MM'))
-        .single();
+        .gte('date', startDate.toISOString())
+        .lte('date', endDate.toISOString());
 
-      console.log('Income override:', incomeOverride, 'Error:', overrideError);
+      // Calculate base total (including overrides)
+      const baseTotal = users?.reduce((total, user) => {
+        const override = monthlyOverrides?.find(o => o.user_id === user.id);
+        const amount = override ? override.amount : user.monthly_income;
+        return total + (amount || 0);
+      }, 0) || 0;
 
-      // Get budget information for current month
+      // Calculate extra income total
+      const extraTotal = extraIncomes?.reduce((total, income) => total + (income.amount || 0), 0) || 0;
+
+      // Calculate total income
+      const totalIncome = baseTotal + extraTotal;
+
+      // Fetch user spending data
+      const userSpendingPromises = users.map(async (user) => {
+        const { data: purchases, error: purchasesError } = await supabase
+          .from('purchases')
+          .select('amount, category, date')
+          .eq('user_id', user.id)
+          .gte('date', startDate.toISOString())
+          .lte('date', endDate.toISOString());
+
+        if (purchasesError) throw purchasesError;
+
+        const categoryBreakdown: { [key: string]: number } = {};
+        let totalSpent = 0;
+        let highestCategory = { category: '', amount: 0 };
+
+        purchases?.forEach((purchase) => {
+          const category = purchase.category || 'Uncategorized';
+          const amount = purchase.amount; // Keep negative values for correct sorting
+          categoryBreakdown[category] = (categoryBreakdown[category] || 0) + amount;
+          totalSpent += amount;
+
+          if (Math.abs(categoryBreakdown[category]) > Math.abs(highestCategory.amount)) {
+            highestCategory = {
+              category,
+              amount: categoryBreakdown[category]
+            };
+          }
+        });
+
+        return {
+          userId: user.id,
+          userName: user.name || user.email,
+          totalSpent,
+          categoryBreakdown,
+          highestCategory
+        };
+      });
+
+      const userSpendingData = await Promise.all(userSpendingPromises);
+      setUserSpending(userSpendingData);
+
+      // Find top spender (based on absolute total spent)
+      const topSpender = userSpendingData.reduce((prev, current) => 
+        Math.abs(current.totalSpent) > Math.abs(prev.totalSpent) ? current : prev
+      , userSpendingData[0]);
+      
+      setTopSpender(topSpender);
+
+      // Fetch total stats
+      // Get all categories and their budgets for the current month
       const { data: budgets, error: budgetsError } = await supabase
         .from('budgets')
         .select('*')
-        .eq('month', format(currentDate, 'yyyy-MM'));
+        .eq('month', format(selectedMonth, 'yyyy-MM'));
 
-      console.log('Budgets:', budgets, 'Error:', budgetsError);
+      if (budgetsError) throw budgetsError;
 
-      // Calculate current month stats with null checks
-      const currentExpensesTotal = currentMonthExpenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) ?? 0;
-      const prevExpensesTotal = prevMonthExpenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) ?? 0;
-      const currentIncome = (incomeOverride?.amount ?? baseIncome?.monthly_income) ?? 0;
-      const prevIncome = baseIncome?.monthly_income ?? 0;
-      const totalBudget = budgets?.reduce((sum, budget) => sum + (budget.amount || 0), 0) ?? 0;
+      // Calculate total income and budgeted amount
+      const totalExpenses = userSpendingData.reduce((sum, user) => sum + user.totalSpent, 0);
+      const totalBudgeted = budgets?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
 
-      console.log('Calculated totals:', {
-        currentExpensesTotal,
-        prevExpensesTotal,
-        currentIncome,
-        prevIncome,
-        totalBudget
-      }); // Debug log
-
-      setCurrentMonthStats({
-        expenses: currentExpensesTotal,
-        prevExpenses: prevExpensesTotal,
-        income: currentIncome,
-        prevIncome,
-        budgetUsed: totalBudget > 0 ? (currentExpensesTotal / totalBudget) * 100 : 0,
-        savingsRate: currentIncome > 0 ? ((currentIncome - currentExpensesTotal) / currentIncome) * 100 : 0
+      setTotalStats({
+        totalIncome,
+        totalExpenses,
+        totalBudgeted,
+        totalSpent: totalExpenses
       });
 
-      // Get category spending with null checks
-      const { data: recentPurchases, error: recentPurchasesError } = await supabase
-        .from('purchases')
-        .select('amount, category')
-        .gte('date', currentMonth.toISOString())
-        .lte('date', endOfMonth(currentDate).toISOString())
-        .eq('user_id', user.id);
+      // Process category data for the chart
+      const allCategories = new Set([
+        ...Object.keys(userSpendingData.reduce((acc, user) => ({
+          ...acc,
+          ...user.categoryBreakdown
+        }), {})),
+        ...(budgets?.map(b => b.category) || [])
+      ]);
 
-      console.log('Recent purchases:', recentPurchases, 'Error:', recentPurchasesError); // Debug log
+      const processedCategoryData = Array.from(allCategories).map(category => {
+        const actualSpent = userSpendingData.reduce(
+          (sum, user) => sum + Math.abs(user.categoryBreakdown[category] || 0),
+          0
+        );
+        const budgetItem = budgets?.find(b => b.category === category);
+        const budgetedAmount = budgetItem?.amount || 0;
 
-      // Process category spending with null checks
-      const categoryTotals = recentPurchases?.reduce((acc: {[key: string]: number}, purchase) => {
-        if (purchase.category && purchase.amount) {
-          acc[purchase.category] = (acc[purchase.category] || 0) + purchase.amount;
-        }
-        return acc;
-      }, {}) || {};
-
-      const totalSpent = Object.values(categoryTotals).reduce((sum, amount) => sum + amount, 0);
-
-      const categoryStats = Object.entries(categoryTotals).map(([category, amount]) => {
-        const budget = budgets?.find(b => b.category === category);
         return {
           category,
-          amount,
-          budgeted: budget?.amount || 0,
-          percentage: totalSpent > 0 ? (amount / totalSpent) * 100 : 0
+          actual: actualSpent,
+          budgeted: budgetedAmount,
+          variance: actualSpent - budgetedAmount
         };
       });
 
-      console.log('Category stats:', categoryStats); // Debug log
-
-      setCategorySpending(categoryStats.sort((a, b) => b.amount - a.amount));
-
-      // Get historical data for trend
-      const months = Array.from({ length: 7 }, (_, i) => {
-        const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-        return {
-          start: startOfMonth(date),
-          end: endOfMonth(date),
-          month: format(date, 'MMM yyyy')
-        };
-      }).reverse();
-
-      const monthlyStats = await Promise.all(months.map(async ({ start, end, month }) => {
-        const { data: expenses } = await supabase
-          .from('purchases')
-          .select('amount')
-          .gte('date', start.toISOString())
-          .lte('date', end.toISOString())
-          .eq('user_id', user.id);
-
-        const { data: monthOverride } = await supabase
-          .from('monthly_income_overrides')
-          .select('amount')
-          .eq('user_id', user.id)
-          .eq('month', format(start, 'yyyy-MM'))
-          .single();
-
-        const monthIncome = monthOverride?.amount ?? baseIncome?.monthly_income ?? 0;
-        const monthExpenses = expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) ?? 0;
-
-        return {
-          month,
-          income: monthIncome,
-          expenses: monthExpenses,
-          savings: monthIncome - monthExpenses
-        };
-      }));
-
-      console.log('Monthly stats:', monthlyStats); // Debug log
-
-      setMonthlyData(monthlyStats);
+      setCategoryData(processedCategoryData);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching analytics data:', error);
+      console.error('Error fetching data:', error);
       setLoading(false);
     }
   };
 
+  const fetchHistoricalData = async () => {
+    try {
+      // Fetch last 12 months of data
+      const monthsData = await Promise.all(
+        Array.from({ length: 12 }).map(async (_, i) => {
+          const date = subMonths(selectedMonth, i);
+          const start = startOfMonth(date);
+          const end = endOfMonth(date);
+
+          // Get spending data
+          const { data: purchases } = await supabase
+            .from('purchases')
+            .select('amount, category, date, created_at')
+            .gte('date', start.toISOString())
+            .lte('date', end.toISOString());
+
+          // Get budget data
+          const { data: budgets } = await supabase
+            .from('budgets')
+            .select('amount')
+            .eq('month', format(date, 'yyyy-MM'));
+
+          const totalSpent = purchases?.reduce((sum, p) => sum + Math.abs(p.amount), 0) || 0;
+          const totalBudgeted = budgets?.reduce((sum, b) => sum + (b.amount || 0), 0) || 0;
+
+          // Calculate behavioral data
+          const categoryData = purchases?.reduce((acc: any, p) => {
+            if (!acc[p.category]) {
+              acc[p.category] = {
+                totalAmount: 0,
+                count: 0,
+                times: []
+              };
+            }
+            acc[p.category].totalAmount += Math.abs(p.amount);
+            acc[p.category].count += 1;
+            acc[p.category].times.push(new Date(p.created_at).getHours());
+            return acc;
+          }, {});
+
+          const behaviorData = Object.entries(categoryData || {}).map(([category, data]: [string, any]) => ({
+            category,
+            avgSize: data.totalAmount / data.count,
+            frequency: data.count,
+            peakTime: `${Math.round(data.times.reduce((a: number, b: number) => a + b, 0) / data.times.length)}:00`
+          }));
+
+          return {
+            month: start.toISOString(),
+            totalSpent,
+            totalBudgeted,
+            behaviorData
+          };
+        })
+      );
+
+      setTimeAnalysisData(monthsData);
+      setUserBehaviorData(
+        Object.values(
+          monthsData.reduce((acc: any, month) => {
+            month.behaviorData.forEach((bd: any) => {
+              if (!acc[bd.category]) {
+                acc[bd.category] = {
+                  category: bd.category,
+                  avgSize: 0,
+                  frequency: 0,
+                  peakTime: bd.peakTime,
+                  count: 0
+                };
+              }
+              acc[bd.category].avgSize += bd.avgSize;
+              acc[bd.category].frequency += bd.frequency;
+              acc[bd.category].count += 1;
+            });
+            return acc;
+          }, {})
+        ).map((cat: any) => ({
+          ...cat,
+          avgSize: cat.avgSize / cat.count
+        }))
+      );
+    } catch (error) {
+      console.error('Error fetching historical data:', error);
+    }
+  };
+
+  const getFilteredData = () => {
+    let filteredSpending = [...userSpending];
+    
+    if (selectedUser !== 'all') {
+      filteredSpending = filteredSpending.filter(user => user.userId === selectedUser);
+    }
+    
+    if (selectedCategory !== 'all') {
+      filteredSpending = filteredSpending.map(user => ({
+        ...user,
+        categoryBreakdown: {
+          [selectedCategory]: user.categoryBreakdown[selectedCategory] || 0
+        }
+      }));
+    }
+    
+    return filteredSpending;
+  };
+
+  const allCategories = Array.from(new Set(
+    userSpending.flatMap(user => Object.keys(user.categoryBreakdown))
+  )).sort();
+
   if (loading) {
-    return <div className="flex items-center justify-center h-full">Loading analytics...</div>;
+    return <div>Loading...</div>;
   }
 
+  const budgetUsedPercentage = totalStats.totalBudgeted 
+    ? (Math.abs(totalStats.totalExpenses) / totalStats.totalBudgeted) * 100 
+    : 0;
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-900">Monthly Expenses</h3>
-            <div className={`flex items-center ${
-              currentMonthStats.expenses > currentMonthStats.prevExpenses ? 'text-red-500' : 'text-green-500'
-            }`}>
-              {currentMonthStats.expenses > currentMonthStats.prevExpenses ? 
-                <TrendingUp className="h-5 w-5" /> : 
-                <TrendingDown className="h-5 w-5" />
-              }
-              <span className="ml-1">
-                {Math.abs(
-                  ((currentMonthStats.expenses - currentMonthStats.prevExpenses) / 
-                  currentMonthStats.prevExpenses) * 100
-                ).toFixed(1)}%
-              </span>
+    <div className="space-y-6">
+      {/* Filters Row */}
+      <div className="flex flex-wrap gap-4 items-center bg-white p-4 rounded-lg shadow-sm">
+        <div className="flex-1 min-w-[200px]">
+          <select
+            className="w-full border rounded-md p-2"
+            value={selectedUser}
+            onChange={(e) => setSelectedUser(e.target.value)}
+          >
+            <option value="all">All Users</option>
+            {users.map(user => (
+              <option key={user.id} value={user.id}>
+                {user.name || user.email}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex-1 min-w-[200px]">
+          <select
+            className="w-full border rounded-md p-2"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+          >
+            <option value="all">All Categories</option>
+            {allCategories.map(category => (
+              <option key={category} value={category}>{category}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex-1 min-w-[200px]">
+          <input
+            type="month"
+            className="w-full border rounded-md p-2"
+            value={format(selectedMonth, 'yyyy-MM')}
+            onChange={(e) => setSelectedMonth(new Date(e.target.value))}
+          />
+        </div>
+      </div>
+
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <h3 className="text-sm text-gray-500">Total Income</h3>
+          <p className="text-2xl font-bold">${totalStats.totalIncome.toFixed(2)}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <h3 className="text-sm text-gray-500">Total Expenses</h3>
+          <p className="text-2xl font-bold">${Math.abs(totalStats.totalExpenses).toFixed(2)}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <h3 className="text-sm text-gray-500">Total Budgeted</h3>
+          <p className="text-2xl font-bold">${totalStats.totalBudgeted.toFixed(2)}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <h3 className="text-sm text-gray-500">Budget Used</h3>
+          <p className="text-2xl font-bold">{budgetUsedPercentage.toFixed(1)}%</p>
+        </div>
+      </div>
+
+      {/* Top Spender Card */}
+      {topSpender && (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <h2 className="text-xl font-bold mb-4">Top Spender</h2>
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-gray-600">User</p>
+              <p className="font-medium">{topSpender.userName}</p>
+            </div>
+            <div>
+              <p className="text-gray-600">Total Spent</p>
+              <p className="font-medium">${Math.abs(topSpender.totalSpent).toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-gray-600">Highest in Category</p>
+              <p className="font-medium">{topSpender.highestCategory.category}</p>
+              <p className="text-sm text-gray-500">
+                ${Math.abs(topSpender.highestCategory.amount).toFixed(2)}
+              </p>
             </div>
           </div>
-          <p className="mt-2 text-3xl font-bold text-gray-900">
-            €{currentMonthStats.expenses.toFixed(2)}
-          </p>
-          <p className="mt-1 text-sm text-gray-500">vs last month</p>
         </div>
+      )}
 
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-900">Monthly Income</h3>
-            <div className={`flex items-center ${
-              currentMonthStats.income > currentMonthStats.prevIncome ? 'text-green-500' : 'text-red-500'
-            }`}>
-              {currentMonthStats.income > currentMonthStats.prevIncome ? 
-                <TrendingUp className="h-5 w-5" /> : 
-                <TrendingDown className="h-5 w-5" />
-              }
-              <span className="ml-1">
-                {Math.abs(
-                  ((currentMonthStats.income - currentMonthStats.prevIncome) / 
-                  currentMonthStats.prevIncome) * 100
-                ).toFixed(1)}%
-              </span>
-            </div>
-          </div>
-          <p className="mt-2 text-3xl font-bold text-gray-900">
-            €{currentMonthStats.income.toFixed(2)}
-          </p>
-          <p className="mt-1 text-sm text-gray-500">vs last month</p>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-900">Savings Rate</h3>
-            <PiggyBank className="h-6 w-6 text-blue-500" />
-          </div>
-          <p className="mt-2 text-3xl font-bold text-gray-900">
-            {currentMonthStats.savingsRate.toFixed(1)}%
-          </p>
-          <p className="mt-1 text-sm text-gray-500">of income saved</p>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-900">Budget Status</h3>
-            <DollarSign className="h-6 w-6 text-blue-500" />
-          </div>
-          <p className="mt-2 text-3xl font-bold text-gray-900">
-            {currentMonthStats.budgetUsed.toFixed(1)}%
-          </p>
-          <p className="mt-1 text-sm text-gray-500">of total budget used</p>
-        </div>
+      {/* User Spending Details */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {getFilteredData()
+          .sort((a, b) => Math.abs(b.totalSpent) - Math.abs(a.totalSpent))
+          .map(user => (
+            <UserSpendingDetails key={user.userId} user={user} />
+          ))}
       </div>
 
-      {/* Income vs Expenses Trend */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h3 className="text-lg font-medium text-gray-900 mb-6">Income vs Expenses Trend</h3>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip formatter={(value) => `€${Number(value).toFixed(2)}`} />
-              <Legend />
-              <Line type="monotone" dataKey="income" stroke="#0088FE" name="Income" />
-              <Line type="monotone" dataKey="expenses" stroke="#FF8042" name="Expenses" />
-              <Line type="monotone" dataKey="savings" stroke="#00C49F" name="Savings" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      {/* Category Breakdown */}
+      <CategoryBreakdown categoryData={selectedCategory === 'all' ? categoryData : categoryData.filter(item => item.category === selectedCategory)} />
 
-      {/* Category Analysis */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {/* Top Spending Categories */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-6">Top Spending Categories</h3>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={categorySpending.slice(0, 5)}
-                  dataKey="amount"
-                  nameKey="category"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                >
-                  {categorySpending.slice(0, 5).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => `€${Number(value).toFixed(2)}`} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+      {/* Time Analysis */}
+      <TimeAnalysis data={timeAnalysisData} />
 
-        {/* Budget vs Actual */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-6">Budget vs Actual Spending</h3>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={categorySpending}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="category" />
-                <YAxis />
-                <Tooltip formatter={(value) => `€${Number(value).toFixed(2)}`} />
-                <Legend />
-                <Bar dataKey="budgeted" name="Budget" fill="#0088FE" />
-                <Bar dataKey="amount" name="Actual" fill="#FF8042" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* Category Details Table */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-6">Category Details</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead>
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Spent</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Budgeted</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">% of Total</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {categorySpending.map((category, index) => (
-                <tr key={category.category} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {category.category}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    €{category.amount.toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    €{category.budgeted.toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {category.percentage.toFixed(1)}%
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      category.amount > category.budgeted
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-green-100 text-green-800'
-                    }`}>
-                      {category.amount > category.budgeted ? 'Over Budget' : 'Within Budget'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* User Behavior */}
+      <UserBehavior data={userBehaviorData} />
     </div>
   );
-}
+};
