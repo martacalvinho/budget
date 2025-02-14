@@ -20,10 +20,13 @@ export default defineConfig({
   resolve: {
     alias: {
       'react': 'react',
-      'react-dom': 'react-dom'
-    }
+      'react-dom': 'react-dom',
+      'chart.js': 'chart.js',
+      'react-chartjs-2': 'react-chartjs-2'
+    },
+    dedupe: ['react', 'react-dom', 'chart.js', 'react-chartjs-2']
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom']
+    include: ['react', 'react-dom', 'react-router-dom', 'chart.js', 'react-chartjs-2']
   }
 });
