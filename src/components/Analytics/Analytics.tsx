@@ -93,9 +93,14 @@ export default function Analytics() {
       const endDate = endOfMonth(selectedMonth);
 
       // Get users and their base income
-      const { data: users } = await supabase
+      const { data: users, error: usersError } = await supabase
         .from('users')
-        .select('id, monthly_income');
+        .select('id, name, email, monthly_income');
+
+      if (usersError) throw usersError;
+      if (!users || users.length === 0) {
+        throw new Error('No users found');
+      }
 
       // Get monthly overrides for the specific month
       const { data: monthlyOverrides } = await supabase
@@ -334,7 +339,19 @@ export default function Analytics() {
   )).sort();
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-[200px]">
+        <div className="animate-pulse text-gray-600">Loading analytics data...</div>
+      </div>
+    );
+  }
+
+  if (!userSpending.length) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+        <p className="text-gray-600">No spending data available for the selected period.</p>
+      </div>
+    );
   }
 
   const budgetUsedPercentage = totalStats.totalBudgeted 
