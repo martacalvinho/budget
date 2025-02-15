@@ -338,8 +338,7 @@ export default function Income() {
                         </span>
                       )}
                     </span>
-                    {selectedMonth === getCurrentMonthDate() && (
-                      <button
+                    <button
                         onClick={() => {
                           setEditingUser(user);
                           setBaseIncomeAmount((override?.amount || user.monthly_income).toString());
@@ -349,7 +348,6 @@ export default function Income() {
                       >
                         <Edit2 className="h-4 w-4" />
                       </button>
-                    )}
                   </div>
                 </div>
               );
