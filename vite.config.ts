@@ -9,22 +9,24 @@ export default defineConfig({
       transformMixedEsModules: true
     },
     rollupOptions: {
-      external: ['react'],
       output: {
         globals: {
-          react: 'React'
+          react: 'React',
+          'react-dom': 'ReactDOM'
+        },
+        manualChunks: {
+          'vendor': ['react', 'react-dom', 'react-router-dom', 'chart.js', 'react-chartjs-2']
         }
       }
     }
   },
   resolve: {
     alias: {
-      'react': 'react',
-      'react-dom': 'react-dom',
-      'chart.js': 'chart.js',
-      'react-chartjs-2': 'react-chartjs-2'
-    },
-    dedupe: ['react', 'react-dom', 'chart.js', 'react-chartjs-2']
+      'react': '/node_modules/react',
+      'react-dom': '/node_modules/react-dom',
+      'chart.js': '/node_modules/chart.js',
+      'react-chartjs-2': '/node_modules/react-chartjs-2'
+    }
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom', 'chart.js', 'react-chartjs-2']
