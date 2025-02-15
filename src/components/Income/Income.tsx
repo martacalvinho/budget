@@ -355,7 +355,7 @@ export default function Income() {
             <Euro className="h-8 w-8 text-green-500" />
           </div>
           <p className="mt-2 text-3xl font-bold text-green-600">€{extraTotal.toFixed(2)}</p>
-          <p className="text-sm text-gray-500">{new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
+          <p className="text-sm text-gray-500">{formatMonthDisplay(selectedMonth)}</p>
         </div>
 
         {/* Total Income Card */}
@@ -365,7 +365,7 @@ export default function Income() {
             <DollarSign className="h-8 w-8 text-purple-500" />
           </div>
           <p className="mt-2 text-3xl font-bold text-purple-600">€{totalIncome.toFixed(2)}</p>
-          <p className="text-sm text-gray-500">{new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
+          <p className="text-sm text-gray-500">{formatMonthDisplay(selectedMonth)}</p>
         </div>
       </div>
 
