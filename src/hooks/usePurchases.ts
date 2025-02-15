@@ -13,13 +13,37 @@ export function usePurchases(userId?: string) {
   useEffect(() => {
     const fetchPurchases = async () => {
       try {
+        const currentUser = (await supabase.auth.getUser()).data.user;
+        if (!currentUser) throw new Error('No authenticated user');
+
+        // First, get the list of users who have shared their budget with the current user
+        const { data: sharedWith } = await supabase
+          .from('shared_users')
+          .select('owner_id')
+          .eq('shared_with_email', currentUser.email);
+
+        // Get purchases for the specified user or all shared users
         let query = supabase
           .from('purchases')
           .select('*')
           .order('date', { ascending: false });
 
         if (userId) {
+          // If a specific user is requested, check if we have access
+          const hasAccess = userId === currentUser.id || 
+            sharedWith?.some(share => share.owner_id === userId);
+          
+          if (!hasAccess) {
+            throw new Error('No access to this user\'s purchases');
+          }
           query = query.eq('user_id', userId);
+        } else {
+          // If no specific user, get purchases for current user and all users who shared
+          const accessibleUserIds = [
+            currentUser.id,
+            ...(sharedWith?.map(share => share.owner_id) || [])
+          ];
+          query = query.in('user_id', accessibleUserIds);
         }
 
         const { data, error } = await query;
