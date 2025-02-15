@@ -243,15 +243,8 @@ export default function Income() {
   };
 
   // Calculate monthly totals
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
-  const extraTotal = extraIncomes
-    .filter(income => {
-      const incomeDate = new Date(income.date);
-      return incomeDate.getMonth() === currentMonth && 
-             incomeDate.getFullYear() === currentYear;
-    })
-    .reduce((total, income) => total + income.amount, 0);
+  const selectedDate = new Date(selectedMonth);
+  const extraTotal = extraIncomes.reduce((total, income) => total + income.amount, 0);
 
   const baseTotal = users.reduce((total, user) => {
     // Check if there's an override for this month
