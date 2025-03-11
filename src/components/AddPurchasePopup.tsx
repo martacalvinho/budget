@@ -34,12 +34,12 @@ const AddPurchasePopup: React.FC<AddPurchasePopupProps> = ({
     e.preventDefault();
     
     if (!formData.category) {
-      toast.error('Please select a category');
+      toast.error('Por favor selecione uma categoria');
       return;
     }
 
     if (formData.userIds.length === 0) {
-      toast.error('Please select at least one user');
+      toast.error('Por favor selecione pelo menos um utilizador');
       return;
     }
 
@@ -65,11 +65,11 @@ const AddPurchasePopup: React.FC<AddPurchasePopupProps> = ({
 
       if (error) throw error;
       
-      toast.success('Purchase added successfully');
+      toast.success('Compra adicionada com sucesso');
       onPurchaseAdded();
     } catch (error) {
-      console.error('Error adding purchase:', error);
-      toast.error('Failed to add purchase');
+      console.error('Erro ao adicionar compra:', error);
+      toast.error('Falha ao adicionar compra');
     }
   };
 
@@ -116,12 +116,12 @@ const AddPurchasePopup: React.FC<AddPurchasePopupProps> = ({
           <X className="h-6 w-6" />
         </button>
         
-        <h2 className="text-2xl font-bold mb-6">Add New Purchase</h2>
+        <h2 className="text-2xl font-bold mb-6">Adicionar Nova Compra</h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Amount (€)
+              Montante (€)
             </label>
             <input
               type="number"
@@ -135,7 +135,7 @@ const AddPurchasePopup: React.FC<AddPurchasePopupProps> = ({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Category
+              Categoria
             </label>
             <select
               value={formData.category}
@@ -144,9 +144,9 @@ const AddPurchasePopup: React.FC<AddPurchasePopupProps> = ({
               required
               disabled={categoriesLoading}
             >
-              <option value="">Select a category</option>
+              <option value="">Selecione uma categoria</option>
               {groupedCategories.fixed && (
-                <optgroup label="Fixed Expenses">
+                <optgroup label="Despesas Fixas">
                   {groupedCategories.fixed.map((category) => (
                     <option key={category.id} value={category.name}>
                       {category.name}
@@ -155,7 +155,7 @@ const AddPurchasePopup: React.FC<AddPurchasePopupProps> = ({
                 </optgroup>
               )}
               {groupedCategories.flexible && (
-                <optgroup label="Flexible Expenses">
+                <optgroup label="Despesas Flexíveis">
                   {groupedCategories.flexible.map((category) => (
                     <option key={category.id} value={category.name}>
                       {category.name}
@@ -168,7 +168,7 @@ const AddPurchasePopup: React.FC<AddPurchasePopupProps> = ({
 
           <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Split Between Users
+              Dividir Entre Utilizadores
             </label>
             <div className="flex flex-wrap gap-2 mb-2">
               {selectedUsers.map(user => user && (
@@ -197,7 +197,7 @@ const AddPurchasePopup: React.FC<AddPurchasePopupProps> = ({
                     setShowSuggestions(true);
                   }}
                   onFocus={() => setShowSuggestions(true)}
-                  placeholder="Type to search users..."
+                  placeholder="Escreva para pesquisar utilizadores..."
                   className="w-full p-2 border rounded-md"
                 />
                 <Users className="absolute right-3 h-5 w-5 text-gray-400" />
@@ -218,7 +218,7 @@ const AddPurchasePopup: React.FC<AddPurchasePopupProps> = ({
                     ))
                   ) : (
                     <div className="px-4 py-2 text-gray-500">
-                      {searchTerm ? 'No matching users found' : 'Type to search users'}
+                      {searchTerm ? 'Nenhum utilizador encontrado' : 'Escreva para pesquisar utilizadores'}
                     </div>
                   )}
                 </div>
@@ -226,14 +226,14 @@ const AddPurchasePopup: React.FC<AddPurchasePopupProps> = ({
             </div>
             {formData.userIds.length > 0 && formData.amount && (
               <p className="text-sm text-gray-500 mt-2">
-                Split amount: €{(parseFloat(formData.amount) / formData.userIds.length).toFixed(2)} per person
+                Montante dividido: €{(parseFloat(formData.amount) / formData.userIds.length).toFixed(2)} por pessoa
               </p>
             )}
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description (Optional)
+              Descrição (Opcional)
             </label>
             <input
               type="text"
@@ -245,7 +245,7 @@ const AddPurchasePopup: React.FC<AddPurchasePopupProps> = ({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Date
+              Data
             </label>
             <input
               type="date"
@@ -260,7 +260,7 @@ const AddPurchasePopup: React.FC<AddPurchasePopupProps> = ({
             type="submit"
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
           >
-            Add Purchase
+            Adicionar Compra
           </button>
         </form>
       </div>

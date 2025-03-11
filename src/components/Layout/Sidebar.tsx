@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -19,19 +19,19 @@ export default function Sidebar() {
   const isActive = (path: string) => location.pathname === path;
 
   const menuItems = [
-    { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/income', icon: Wallet, label: 'Income' },
-    { path: '/budget', icon: PiggyBank, label: 'Budget' },
-    { path: '/savings', icon: Coins, label: 'Savings' },
-    { path: '/analytics', icon: BarChart2, label: 'Analytics' },
-    { path: '/statements', icon: FileText, label: 'Statements' },
-    { path: '/settings', icon: Settings, label: 'Settings' },
+    { path: '/', icon: LayoutDashboard, label: 'Painel' },
+    { path: '/income', icon: Wallet, label: 'Rendimento' },
+    { path: '/budget', icon: PiggyBank, label: 'Orçamento' },
+    { path: '/savings', icon: Coins, label: 'Poupanças e Objetivos' },
+    { path: '/analytics', icon: BarChart2, label: 'Análises' },
+    { path: '/statements', icon: FileText, label: 'Extratos' },
+    { path: '/settings', icon: Settings, label: 'Definições' },
   ];
 
   return (
     <div className="w-64 bg-gray-900 text-white min-h-screen p-4">
       <div className="flex items-center mb-8">
-        <span className="text-xl font-bold">Finance App</span>
+        <span className="text-xl font-bold">Gestão Financeira</span>
       </div>
 
       <nav className="space-y-2">
@@ -55,7 +55,7 @@ export default function Sidebar() {
           className="w-full flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-800 rounded-lg transition-colors"
         >
           <LogOut className="h-5 w-5" />
-          <span>Logout</span>
+          <span>Terminar Sessão</span>
         </button>
       </nav>
     </div>

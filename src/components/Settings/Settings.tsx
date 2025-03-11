@@ -1,4 +1,4 @@
-import React from 'react';
+
 import CategoryManagement from './CategoryManagement';
 import UserManagement from './UserManagement';
 import UserSharing from './UserSharing';
@@ -6,7 +6,7 @@ import UserSharing from './UserSharing';
 export default function Settings() {
   return (
     <div className="space-y-8">
-      <h2 className="text-2xl font-bold">Settings</h2>
+      <h2 className="text-2xl font-bold">Definições</h2>
 
       {/* User Management Section */}
       <div className="bg-white rounded-lg shadow-md p-6">

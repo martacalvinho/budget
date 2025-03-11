@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useCategories } from '../../hooks/useCategories';
 import { supabase } from '../../lib/supabase';
-import { Edit2, Save, Plus, AlertCircle, TrendingUp, Target, Bell, X } from 'lucide-react';
+import { Edit2, Save, AlertCircle, TrendingUp, Target, Bell, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
@@ -28,13 +28,13 @@ export default function BudgetManagement() {
   const [selectedMonth, setSelectedMonth] = useState(
     new Date().toISOString().slice(0, 7)
   );
-  const [loading, setLoading] = useState(true);
+  const [, setCarregando] = useState(true);
   const [editAmount, setEditAmount] = useState<string>('');
   const [isTableCreated, setIsTableCreated] = useState(false);
   const [spendingData, setSpendingData] = useState<SpendingData>({});
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
-  const [copyLoading, setCopyLoading] = useState(false);
+  const [copiando, setCopiando] = useState(false);
   const [view, setView] = useState<'monthly' | 'yearly'>('monthly');
 
   const fetchSpendingData = async () => {
@@ -81,7 +81,7 @@ export default function BudgetManagement() {
   // Fetch initial data
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
+      setCarregando(true);
       try {
         // Check if table exists
         const { error: tableCheckError } = await supabase
@@ -91,7 +91,7 @@ export default function BudgetManagement() {
 
         if (tableCheckError) {
           setIsTableCreated(false);
-          setLoading(false);
+          setCarregando(false);
           return;
         }
 
@@ -159,9 +159,9 @@ export default function BudgetManagement() {
         await fetchSpendingData();
       } catch (error) {
         console.error('Error:', error);
-        toast.error('Failed to load budget data');
+        toast.error('Falha ao carregar dados do orçamento');
       } finally {
-        setLoading(false);
+        setCarregando(false);
       }
     };
 
@@ -192,7 +192,7 @@ export default function BudgetManagement() {
 
   const handleAdd = async (category: string, type: 'fixed' | 'flexible') => {
     if (!isTableCreated) {
-      toast.error('Budget table not yet created. Please run the migration first.');
+      toast.error('Tabela de orçamento ainda não criada. Por favor, execute a migração primeiro.');
       return;
     }
 
@@ -214,18 +214,18 @@ export default function BudgetManagement() {
         setBudgets(prev => [...prev, data]);
         setEditingId(data.id);
         setEditAmount('0');
-        toast.success('Budget category added');
+        toast.success('Categoria de orçamento adicionada');
       }
     } catch (error) {
       console.error('Error:', error);
-      toast.error('Failed to add budget category');
+      toast.error('Falha ao adicionar categoria de orçamento');
     }
   };
 
   const handleSave = async (id: string) => {
     const amount = parseFloat(editAmount);
     if (isNaN(amount) || amount < 0) {
-      toast.error('Please enter a valid amount');
+      toast.error('Por favor, insira um montante válido');
       return;
     }
 
@@ -240,21 +240,21 @@ export default function BudgetManagement() {
       setBudgets(budgets.map(b => 
         b.id === id ? { ...b, amount } : b
       ));
-      toast.success('Budget updated successfully');
+      toast.success('Orçamento atualizado com sucesso');
       setEditingId(null);
     } catch (error) {
       console.error('Error:', error);
-      toast.error('Failed to update budget');
+      toast.error('Falha ao atualizar orçamento');
     }
   };
 
   const handleCopyBudget = async () => {
     if (selectedMonths.length === 0) {
-      toast.error('Please select at least one month');
+      toast.error('Por favor, selecione pelo menos um mês');
       return;
     }
 
-    setCopyLoading(true);
+    setCopiando(true);
     try {
       // Get current budgets
       const { data: currentBudgets, error: fetchError } = await supabase
@@ -283,14 +283,14 @@ export default function BudgetManagement() {
         if (insertError) throw insertError;
       }
 
-      toast.success('Budget copied successfully');
+      toast.success('Orçamento copiado com sucesso');
       setShowCopyModal(false);
       setSelectedMonths([]);
     } catch (error) {
       console.error('Error copying budget:', error);
-      toast.error('Failed to copy budget');
+      toast.error('Falha ao copiar orçamento');
     } finally {
-      setCopyLoading(false);
+      setCopiando(false);
     }
   };
 
@@ -330,7 +330,7 @@ export default function BudgetManagement() {
           <div>
             <h4 className="font-medium text-lg">{budget.category}</h4>
             <p className="text-sm text-gray-500">
-              {budget.type === 'fixed' ? 'Fixed Expense' : 'Flexible Expense'}
+              {budget.type === 'fixed' ? 'Despesa Fixa' : 'Despesa Flexível'}
             </p>
           </div>
           <div className="w-20 h-20">
@@ -348,7 +348,7 @@ export default function BudgetManagement() {
 
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-600">Budget:</span>
+            <span className="text-sm text-gray-600">Orçamento:</span>
             {editingId === budget.id ? (
               <div className="flex items-center gap-2">
                 <input
@@ -384,14 +384,14 @@ export default function BudgetManagement() {
           </div>
 
           <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-600">Spent:</span>
+            <span className="text-sm text-gray-600">Gasto:</span>
             <span className={`font-medium ${isOverBudget ? 'text-red-600' : ''}`}>
               €{spent.toFixed(2)}
             </span>
           </div>
 
           <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-600">Remaining:</span>
+            <span className="text-sm text-gray-600">Restante:</span>
             <span className={`font-medium ${isOverBudget ? 'text-red-600' : 'text-green-600'}`}>
               {isOverBudget ? '-' : ''}€{Math.abs(remaining).toFixed(2)}
             </span>
@@ -417,7 +417,7 @@ export default function BudgetManagement() {
             </div>
             <div className="ml-3">
               <p className="text-sm text-yellow-700">
-                The budget table hasn't been created yet. Please run the migration in your Supabase SQL editor.
+                A tabela de orçamento ainda não foi criada. Por favor, execute a migração no editor SQL do Supabase.
               </p>
             </div>
           </div>
@@ -435,7 +435,7 @@ export default function BudgetManagement() {
       {/* Header Section */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold">Budget Management</h2>
+          <h2 className="text-2xl font-semibold">Gestão de Orçamento</h2>
           <div className="flex items-center gap-4">
             <div className="flex rounded-md shadow-sm" role="group">
               <button
@@ -446,7 +446,7 @@ export default function BudgetManagement() {
                     : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                 }`}
               >
-                Monthly
+                Mensal
               </button>
               <button
                 onClick={() => setView('yearly')}
@@ -456,7 +456,7 @@ export default function BudgetManagement() {
                     : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                 }`}
               >
-                Yearly
+                Anual
               </button>
             </div>
             {view === 'monthly' && (
@@ -471,7 +471,7 @@ export default function BudgetManagement() {
                   onClick={() => setShowCopyModal(true)}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
                 >
-                  Copy Budget
+                  Copiar Orçamento
                 </button>
               </>
             )}
@@ -482,7 +482,7 @@ export default function BudgetManagement() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-blue-50 rounded-lg p-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-blue-700 font-medium">Total Budget</h3>
+                <h3 className="text-blue-700 font-medium">Orçamento Total</h3>
                 <TrendingUp className="h-5 w-5 text-blue-700" />
               </div>
               <p className="text-2xl font-bold text-blue-700 mt-2">
@@ -492,7 +492,7 @@ export default function BudgetManagement() {
 
             <div className="bg-green-50 rounded-lg p-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-green-700 font-medium">Total Spent</h3>
+                <h3 className="text-green-700 font-medium">Total Gasto</h3>
                 <Target className="h-5 w-5 text-green-700" />
               </div>
               <p className="text-2xl font-bold text-green-700 mt-2">
@@ -503,13 +503,13 @@ export default function BudgetManagement() {
             <div className={`${totalRemaining >= 0 ? 'bg-blue-50' : 'bg-red-50'} rounded-lg p-4`}>
               <div className="flex items-center justify-between">
                 <h3 className={`${totalRemaining >= 0 ? 'text-blue-700' : 'text-red-700'} font-medium`}>
-                  Remaining
+                  Restante
                 </h3>
                 <Bell className={`h-5 w-5 ${totalRemaining >= 0 ? 'text-blue-700' : 'text-red-700'}`} />
               </div>
               <p className={`text-2xl font-bold ${totalRemaining >= 0 ? 'text-blue-700' : 'text-red-700'} mt-2`}>
                 €{Math.abs(totalRemaining).toFixed(2)}
-                {totalRemaining < 0 && ' over budget'}
+                {totalRemaining < 0 && ' acima do orçamento'}
               </p>
             </div>
           </div>
@@ -521,7 +521,7 @@ export default function BudgetManagement() {
           {/* Fixed Expenses */}
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-medium">Fixed Expenses</h3>
+              <h3 className="text-xl font-medium">Despesas Fixas</h3>
               {getUnbudgetedCategories('fixed').length > 0 && (
                 <select
                   onChange={(e) => {
@@ -533,7 +533,7 @@ export default function BudgetManagement() {
                   className="px-3 py-2 border rounded-lg text-sm"
                   defaultValue=""
                 >
-                  <option value="" disabled>Add Fixed Expense</option>
+                  <option value="" disabled>Adicionar Despesa Fixa</option>
                   {getUnbudgetedCategories('fixed').map(category => (
                     <option key={category.id} value={category.name}>
                       {category.name}
@@ -552,7 +552,7 @@ export default function BudgetManagement() {
           {/* Flexible Expenses */}
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-medium">Flexible Expenses</h3>
+              <h3 className="text-xl font-medium">Despesas Flexíveis</h3>
               {getUnbudgetedCategories('flexible').length > 0 && (
                 <select
                   onChange={(e) => {
@@ -564,7 +564,7 @@ export default function BudgetManagement() {
                   className="px-3 py-2 border rounded-lg text-sm"
                   defaultValue=""
                 >
-                  <option value="" disabled>Add Flexible Expense</option>
+                  <option value="" disabled>Adicionar Despesa Flexível</option>
                   {getUnbudgetedCategories('flexible').map(category => (
                     <option key={category.id} value={category.name}>
                       {category.name}
@@ -581,7 +581,7 @@ export default function BudgetManagement() {
           </div>
         </div>
       ) : (
-        <YearlyBudget year={selectedMonth.slice(0, 4)} />
+        <YearlyBudget year={selectedMonth.slice(0, 4)} onYearChange={(year) => setSelectedMonth(`${year}-${selectedMonth.slice(5, 7)}`)} />
       )}
 
       {/* Copy Budget Modal */}
@@ -589,7 +589,7 @@ export default function BudgetManagement() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">Copy Budget to Future Months</h3>
+              <h3 className="text-xl font-semibold">Copiar Orçamento para Meses Futuros</h3>
               <button
                 onClick={() => setShowCopyModal(false)}
                 className="text-gray-500 hover:text-gray-700"
@@ -599,7 +599,7 @@ export default function BudgetManagement() {
             </div>
             
             <p className="text-gray-600 mb-4">
-              Select the months you want to copy the current budget to:
+              Selecione os meses para os quais deseja copiar o orçamento atual:
             </p>
 
             <div className="grid grid-cols-3 gap-3 mb-6">
@@ -618,7 +618,7 @@ export default function BudgetManagement() {
                     className="h-4 w-4 text-blue-600"
                   />
                   <span className="text-sm">
-                    {new Date(month + '-01').toLocaleDateString('default', { month: 'long', year: 'numeric' })}
+                    {new Date(month + '-01').toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}
                   </span>
                 </label>
               ))}
@@ -629,19 +629,19 @@ export default function BudgetManagement() {
                 onClick={() => setShowCopyModal(false)}
                 className="px-4 py-2 border rounded-md hover:bg-gray-50"
               >
-                Cancel
+                Cancelar
               </button>
               <button
                 onClick={handleCopyBudget}
-                disabled={copyLoading || selectedMonths.length === 0}
+                disabled={copiando || selectedMonths.length === 0}
                 className={`
                   px-4 py-2 rounded-md text-white
-                  ${copyLoading || selectedMonths.length === 0
+                  ${copiando || selectedMonths.length === 0
                     ? 'bg-blue-400 cursor-not-allowed'
                     : 'bg-blue-600 hover:bg-blue-700'}
                 `}
               >
-                {copyLoading ? 'Copying...' : 'Copy Budget'}
+                {copiando ? 'A copiar...' : 'Copiar Orçamento'}
               </button>
             </div>
           </div>

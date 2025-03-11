@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { pt } from 'date-fns/locale';
 import { useUsers } from '../../contexts/UserContext';
 import { CategoryBreakdown } from './CategoryBreakdown';
 import { TimeAnalysis } from './TimeAnalysis';
-import { UserBehavior } from './UserBehavior';
+
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface UserSpending {
@@ -77,7 +78,7 @@ export default function Analytics() {
   });
   const [topSpender, setTopSpender] = useState<UserSpending | null>(null);
   const [timeAnalysisData, setTimeAnalysisData] = useState<any[]>([]);
-  const [userBehaviorData, setUserBehaviorData] = useState<any[]>([]);
+
 
   useEffect(() => {
     if (users.length > 0) {
@@ -106,7 +107,7 @@ export default function Analytics() {
       const { data: monthlyOverrides } = await supabase
         .from('monthly_income_overrides')
         .select('*')
-        .eq('month', format(selectedMonth, 'yyyy-MM'));
+        .eq('month', format(selectedMonth, 'yyyy-MM', { locale: pt }));
 
       // Get extra income for the month
       const { data: extraIncomes } = await supabase
@@ -181,7 +182,7 @@ export default function Analytics() {
       const { data: budgets, error: budgetsError } = await supabase
         .from('budgets')
         .select('*')
-        .eq('month', format(selectedMonth, 'yyyy-MM'));
+        .eq('month', format(selectedMonth, 'yyyy-MM', { locale: pt }));
 
       if (budgetsError) throw budgetsError;
 
@@ -286,30 +287,6 @@ export default function Analytics() {
       );
 
       setTimeAnalysisData(monthsData);
-      setUserBehaviorData(
-        Object.values(
-          monthsData.reduce((acc: any, month) => {
-            month.behaviorData.forEach((bd: any) => {
-              if (!acc[bd.category]) {
-                acc[bd.category] = {
-                  category: bd.category,
-                  avgSize: 0,
-                  frequency: 0,
-                  peakTime: bd.peakTime,
-                  count: 0
-                };
-              }
-              acc[bd.category].avgSize += bd.avgSize;
-              acc[bd.category].frequency += bd.frequency;
-              acc[bd.category].count += 1;
-            });
-            return acc;
-          }, {})
-        ).map((cat: any) => ({
-          ...cat,
-          avgSize: cat.avgSize / cat.count
-        }))
-      );
     } catch (error) {
       console.error('Error fetching historical data:', error);
     }
@@ -341,7 +318,7 @@ export default function Analytics() {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[200px]">
-        <div className="animate-pulse text-gray-600">Loading analytics data...</div>
+        <div className="animate-pulse text-gray-600">A carregar dados de análise...</div>
       </div>
     );
   }
@@ -349,7 +326,7 @@ export default function Analytics() {
   if (!userSpending.length) {
     return (
       <div className="bg-white rounded-lg shadow-sm p-6 text-center">
-        <p className="text-gray-600">No spending data available for the selected period.</p>
+        <p className="text-gray-600">Não existem dados de gastos disponíveis para o período selecionado.</p>
       </div>
     );
   }
@@ -368,7 +345,7 @@ export default function Analytics() {
             value={selectedUser}
             onChange={(e) => setSelectedUser(e.target.value)}
           >
-            <option value="all">All Users</option>
+            <option value="all">Todos os Utilizadores</option>
             {users.map(user => (
               <option key={user.id} value={user.id}>
                 {user.name || user.email}
@@ -383,7 +360,7 @@ export default function Analytics() {
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
           >
-            <option value="all">All Categories</option>
+            <option value="all">Todas as Categorias</option>
             {allCategories.map(category => (
               <option key={category} value={category}>{category}</option>
             ))}
@@ -394,7 +371,7 @@ export default function Analytics() {
           <input
             type="month"
             className="w-full border rounded-md p-2"
-            value={format(selectedMonth, 'yyyy-MM')}
+            value={format(selectedMonth, 'yyyy-MM', { locale: pt })}
             onChange={(e) => setSelectedMonth(new Date(e.target.value))}
           />
         </div>
@@ -403,19 +380,19 @@ export default function Analytics() {
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-lg shadow-sm">
-          <h3 className="text-sm text-gray-500">Total Income</h3>
+          <h3 className="text-sm text-gray-500">Rendimento Total</h3>
           <p className="text-2xl font-bold">${totalStats.totalIncome.toFixed(2)}</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm">
-          <h3 className="text-sm text-gray-500">Total Expenses</h3>
+          <h3 className="text-sm text-gray-500">Despesas Totais</h3>
           <p className="text-2xl font-bold">${Math.abs(totalStats.totalExpenses).toFixed(2)}</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm">
-          <h3 className="text-sm text-gray-500">Total Budgeted</h3>
+          <h3 className="text-sm text-gray-500">Orçamento Total</h3>
           <p className="text-2xl font-bold">${totalStats.totalBudgeted.toFixed(2)}</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm">
-          <h3 className="text-sm text-gray-500">Budget Used</h3>
+          <h3 className="text-sm text-gray-500">Orçamento Utilizado</h3>
           <p className="text-2xl font-bold">{budgetUsedPercentage.toFixed(1)}%</p>
         </div>
       </div>
@@ -423,18 +400,18 @@ export default function Analytics() {
       {/* Top Spender Card */}
       {topSpender && (
         <div className="bg-white p-6 rounded-lg shadow-sm">
-          <h2 className="text-xl font-bold mb-4">Top Spender</h2>
+          <h2 className="text-xl font-bold mb-4">Maior Gastador</h2>
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-gray-600">User</p>
+              <p className="text-gray-600">Utilizador</p>
               <p className="font-medium">{topSpender.userName}</p>
             </div>
             <div>
-              <p className="text-gray-600">Total Spent</p>
+              <p className="text-gray-600">Total Gasto</p>
               <p className="font-medium">${Math.abs(topSpender.totalSpent).toFixed(2)}</p>
             </div>
             <div>
-              <p className="text-gray-600">Highest in Category</p>
+              <p className="text-gray-600">Maior Gasto por Categoria</p>
               <p className="font-medium">{topSpender.highestCategory.category}</p>
               <p className="text-sm text-gray-500">
                 ${Math.abs(topSpender.highestCategory.amount).toFixed(2)}
@@ -458,9 +435,6 @@ export default function Analytics() {
 
       {/* Time Analysis */}
       <TimeAnalysis data={timeAnalysisData} />
-
-      {/* User Behavior */}
-      <UserBehavior data={userBehaviorData} />
     </div>
   );
 };

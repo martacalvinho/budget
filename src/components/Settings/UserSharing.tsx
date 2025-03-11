@@ -25,7 +25,7 @@ export default function UserSharing() {
       setSharedUsers(data || []);
     } catch (error) {
       console.error('Error fetching shared users:', error);
-      toast.error('Failed to load shared users');
+      toast.error('Falha ao carregar utilizadores partilhados');
     } finally {
       setLoading(false);
     }
@@ -51,14 +51,14 @@ export default function UserSharing() {
 
       if (error) throw error;
 
-      toast.success('User added successfully');
+      toast.success('Utilizador adicionado com sucesso');
       setNewEmail('');
       fetchSharedUsers();
     } catch (error: any) {
       console.error('Error adding user:', error);
       toast.error(error.message === 'duplicate key value violates unique constraint' 
-        ? 'This email has already been added'
-        : 'Failed to add user');
+        ? 'Este email já foi adicionado'
+        : 'Falha ao adicionar utilizador');
     }
   };
 
@@ -71,21 +71,21 @@ export default function UserSharing() {
 
       if (error) throw error;
 
-      toast.success('User removed successfully');
+      toast.success('Utilizador removido com sucesso');
       fetchSharedUsers();
     } catch (error) {
       console.error('Error removing user:', error);
-      toast.error('Failed to remove user');
+      toast.error('Falha ao remover utilizador');
     }
   };
 
   if (loading) {
-    return <div className="text-center py-4">Loading shared users...</div>;
+    return <div className="text-center py-4">A carregar utilizadores partilhados...</div>;
   }
 
   return (
     <div className="max-w-2xl mx-auto p-4">
-      <h2 className="text-2xl font-semibold mb-6">Share Your Budget</h2>
+      <h2 className="text-2xl font-semibold mb-6">Partilhar o Seu Orçamento</h2>
       
       <form onSubmit={handleAddUser} className="mb-8">
         <div className="flex gap-2">
@@ -93,7 +93,7 @@ export default function UserSharing() {
             type="email"
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
-            placeholder="Enter email address"
+            placeholder="Introduzir endereço de email"
             className="flex-1 px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
@@ -102,15 +102,15 @@ export default function UserSharing() {
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <Plus className="w-4 h-4" />
-            Add User
+            Adicionar Utilizador
           </button>
         </div>
       </form>
 
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold mb-2">Shared With</h3>
+        <h3 className="text-lg font-semibold mb-2">Partilhado Com</h3>
         {sharedUsers.length === 0 ? (
-          <p className="text-gray-500">No users shared with yet</p>
+          <p className="text-gray-500">Ainda não existem utilizadores partilhados</p>
         ) : (
           <ul className="divide-y">
             {sharedUsers.map((user) => (
@@ -118,13 +118,13 @@ export default function UserSharing() {
                 <div>
                   <p className="text-gray-900">{user.shared_with_email}</p>
                   <p className="text-sm text-gray-500">
-                    Added {new Date(user.created_at).toLocaleDateString()}
+                    Adicionado em {new Date(user.created_at).toLocaleDateString('pt-PT')}
                   </p>
                 </div>
                 <button
                   onClick={() => handleRemoveUser(user.id)}
                   className="p-2 text-gray-500 hover:text-red-600 rounded-full hover:bg-red-50"
-                  title="Remove user"
+                  title="Remover utilizador"
                 >
                   <Trash2 className="w-5 h-5" />
                 </button>

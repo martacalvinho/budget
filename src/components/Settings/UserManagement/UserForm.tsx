@@ -24,8 +24,8 @@ const UserForm: React.FC<UserFormProps> = ({ initialData, onSubmit }) => {
     // Create a clean version of the data, omitting empty fields
     const cleanData = {
       ...formData,
-      email: formData.email.trim() || null,
-      card_number: formData.card_number.trim() || null
+      email: formData.email?.trim() || null,
+      card_number: formData.card_number?.trim() || null
     };
 
     await onSubmit(cleanData);
@@ -46,7 +46,7 @@ const UserForm: React.FC<UserFormProps> = ({ initialData, onSubmit }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Name
+            Nome
           </label>
           <input
             type="text"
@@ -58,14 +58,14 @@ const UserForm: React.FC<UserFormProps> = ({ initialData, onSubmit }) => {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Email (Optional)
+            Email (Opcional)
           </label>
           <input
             type="email"
-            value={formData.email}
+            value={formData.email || ''}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             className="w-full p-2 border rounded-md"
-            placeholder="Optional"
+            placeholder="Opcional"
           />
         </div>
       </div>
@@ -73,20 +73,20 @@ const UserForm: React.FC<UserFormProps> = ({ initialData, onSubmit }) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Type
+            Tipo
           </label>
           <select
             value={formData.type}
             onChange={(e) => setFormData({ ...formData, type: e.target.value as 'Adult' | 'Child' })}
             className="w-full p-2 border rounded-md"
           >
-            <option value="Adult">Adult</option>
-            <option value="Child">Child</option>
+            <option value="Adult">Adulto</option>
+            <option value="Child">Criança</option>
           </select>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Monthly Income
+            Rendimento Mensal
           </label>
           <input
             type="number"
@@ -100,11 +100,11 @@ const UserForm: React.FC<UserFormProps> = ({ initialData, onSubmit }) => {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Card Number (Last 4 digits)
+            Número do Cartão (Últimos 4 dígitos)
           </label>
           <input
             type="text"
-            value={formData.card_number}
+            value={formData.card_number || ''}
             onChange={(e) => {
               const value = e.target.value.replace(/\D/g, '').slice(0, 4);
               setFormData({ ...formData, card_number: value });
@@ -121,7 +121,7 @@ const UserForm: React.FC<UserFormProps> = ({ initialData, onSubmit }) => {
         type="submit"
         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
       >
-        {initialData ? 'Update User' : 'Add User'}
+        {initialData ? 'Atualizar Utilizador' : 'Adicionar Utilizador'}
       </button>
     </form>
   );

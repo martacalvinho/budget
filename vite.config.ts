@@ -20,14 +20,7 @@ export default defineConfig({
       }
     }
   },
-  resolve: {
-    alias: {
-      'react': '/node_modules/react',
-      'react-dom': '/node_modules/react-dom',
-      'chart.js': '/node_modules/chart.js',
-      'react-chartjs-2': '/node_modules/react-chartjs-2'
-    }
-  },
+
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom', 'chart.js', 'react-chartjs-2']
   }

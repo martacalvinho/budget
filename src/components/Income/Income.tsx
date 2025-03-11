@@ -11,7 +11,7 @@ const getCurrentMonthDate = () => {
 
 const formatMonthDisplay = (dateStr: string) => {
   const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  return date.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
 };
 
 const getMonthOptions = () => {
@@ -59,7 +59,7 @@ export default function Income() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showBaseIncomeForm, setShowBaseIncomeForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [baseIncomeAmount, setBaseIncomeAmount] = useState('');
+  const [baseIncomeMontante, setBaseIncomeMontante] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthDate());
   const [formData, setFormData] = useState({
     from_person: '',
@@ -100,8 +100,8 @@ export default function Income() {
       if (error) throw error;
       setUsers(data || []);
     } catch (error) {
-      console.error('Error fetching users:', error);
-      toast.error('Failed to load users');
+      console.error('Erro ao obter utilizadores:', error);
+      toast.error('Falha ao carregar utilizadores');
     }
   };
 
@@ -121,8 +121,8 @@ export default function Income() {
       setExtraIncomes(data || []);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching incomes:', error);
-      toast.error('Failed to load extra incomes');
+      console.error('Erro ao obter rendimentos:', error);
+      toast.error('Falha ao carregar rendimentos extra');
       setLoading(false);
     }
   };
@@ -132,7 +132,7 @@ export default function Income() {
     if (!editingUser) return;
 
     try {
-      const amount = parseFloat(baseIncomeAmount);
+      const amount = parseFloat(baseIncomeMontante);
       const existingOverride = monthlyOverrides.find(o => o.user_id === editingUser.id);
 
       if (existingOverride) {
@@ -156,14 +156,14 @@ export default function Income() {
         if (error) throw error;
       }
 
-      toast.success('Base income updated for this month');
+      toast.success('Rendimento base atualizado para este mês');
       setShowBaseIncomeForm(false);
       setEditingUser(null);
-      setBaseIncomeAmount('');
+      setBaseIncomeMontante('');
       fetchMonthlyOverrides();
     } catch (error) {
-      console.error('Error updating base income:', error);
-      toast.error('Failed to update base income');
+      console.error('Erro ao atualizar rendimento base:', error);
+      toast.error('Falha ao atualizar rendimento base');
     }
   };
 
@@ -186,14 +186,14 @@ export default function Income() {
           .eq('id', editingId);
 
         if (error) throw error;
-        toast.success('Income updated successfully');
+        toast.success('Rendimento atualizado com sucesso');
       } else {
         const { error } = await supabase
           .from('extra_income')
           .insert([incomeData]);
 
         if (error) throw error;
-        toast.success('Income added successfully');
+        toast.success('Rendimento adicionado com sucesso');
       }
 
       setShowAddForm(false);
@@ -243,7 +243,6 @@ export default function Income() {
   };
 
   // Calculate monthly totals
-  const selectedDate = new Date(selectedMonth);
   const extraTotal = extraIncomes.reduce((total, income) => total + income.amount, 0);
 
   const baseTotal = users.reduce((total, user) => {
@@ -302,16 +301,16 @@ export default function Income() {
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Extra Income
+            Adicionar Rendimento Extra
           </button>
         )}
       </div>
 
       <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Base Income Card */}
+        {/* Rendimento Base Card */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">Base Income</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Rendimento Base</h2>
             <DollarSign className="h-8 w-8 text-blue-500" />
           </div>
           <p className="text-3xl font-bold text-blue-600">€{baseTotal.toFixed(2)}</p>
@@ -327,14 +326,14 @@ export default function Income() {
                       €{amount.toFixed(2)}
                       {override && (
                         <span className="ml-1 text-xs text-gray-500">
-                          (usually €{user.monthly_income.toFixed(2)})
+                          (normalmente €{user.monthly_income.toFixed(2)})
                         </span>
                       )}
                     </span>
                     <button
                         onClick={() => {
                           setEditingUser(user);
-                          setBaseIncomeAmount((override?.amount || user.monthly_income).toString());
+                          setBaseIncomeMontante((override?.amount || user.monthly_income).toString());
                           setShowBaseIncomeForm(true);
                         }}
                         className="ml-2 text-blue-600 hover:text-blue-700"
@@ -348,20 +347,20 @@ export default function Income() {
           </div>
         </div>
 
-        {/* Extra Income Card */}
+        {/* Rendimento Extra Card */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">Extra Income</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Rendimento Extra</h2>
             <Euro className="h-8 w-8 text-green-500" />
           </div>
           <p className="mt-2 text-3xl font-bold text-green-600">€{extraTotal.toFixed(2)}</p>
           <p className="text-sm text-gray-500">{formatMonthDisplay(selectedMonth)}</p>
         </div>
 
-        {/* Total Income Card */}
+        {/* Rendimento Total Card */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">Total Income</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Rendimento Total</h2>
             <DollarSign className="h-8 w-8 text-purple-500" />
           </div>
           <p className="mt-2 text-3xl font-bold text-purple-600">€{totalIncome.toFixed(2)}</p>
@@ -369,56 +368,42 @@ export default function Income() {
         </div>
       </div>
 
-      {/* Add Extra Income Button */}
-      <div className="mb-8">
-        <button
-          onClick={() => {
-            setEditingId(null);
-            setFormData({ from_person: '', description: '', amount: '', date: '', recurring: false });
-            setShowAddForm(!showAddForm);
-          }}
-          className="w-full bg-white rounded-lg shadow-md p-6 flex items-center justify-center gap-2 text-blue-600 hover:text-blue-700 transition-colors"
-        >
-          <Plus className="h-6 w-6" />
-          <span className="text-lg font-medium">{showAddForm ? 'Cancel' : 'Add Extra Income'}</span>
-        </button>
-      </div>
 
-      {/* Extra Income Form */}
+      {/* Rendimento Extra Form */}
       {showAddForm && (
         <div className="mb-8">
           <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-6">
-              {editingId ? 'Edit Extra Income' : 'Add Extra Income'}
+              {editingId ? 'Editar Rendimento Extra' : 'Adicionar Rendimento Extra'}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700">From</label>
+                <label className="block text-sm font-medium text-gray-700">De</label>
                 <select
                   value={formData.from_person}
                   onChange={(e) => setFormData({ ...formData, from_person: e.target.value })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   required
                 >
-                  <option value="">Select who it's from</option>
+                  <option value="">Selecione a origem</option>
                   {users.map(user => (
                     <option key={user.id} value={user.name}>{user.name}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Description</label>
+                <label className="block text-sm font-medium text-gray-700">Descrição</label>
                 <input
                   type="text"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   required
-                  placeholder="What is this income for?"
+                  placeholder="Qual é a finalidade deste rendimento?"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Amount</label>
+                <label className="block text-sm font-medium text-gray-700">Montante</label>
                 <div className="mt-1 relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <span className="text-gray-500 sm:text-sm">€</span>
@@ -435,7 +420,7 @@ export default function Income() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Date</label>
+                <label className="block text-sm font-medium text-gray-700">Data</label>
                 <input
                   type="date"
                   value={formData.date}
@@ -452,7 +437,7 @@ export default function Income() {
                     onChange={(e) => setFormData({ ...formData, recurring: e.target.checked })}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <span>Recurring Income</span>
+                  <span>Rendimento Recorrente</span>
                 </label>
               </div>
             </div>
@@ -466,28 +451,28 @@ export default function Income() {
                 }}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                Cancel
+                Cancelar
               </button>
               <button
                 type="submit"
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                {editingId ? 'Update Income' : 'Save Income'}
+                {editingId ? 'Atualizar Rendimento' : 'Guardar Rendimento'}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Base Income Form */}
+      {/* Rendimento Base Form */}
       {showBaseIncomeForm && (
         <div className="mb-8">
           <form onSubmit={handleBaseIncomeUpdate} className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-6">
-              Update Base Income for {editingUser?.name}
+              Atualizar Rendimento Base para {editingUser?.name}
             </h3>
             <div className="max-w-md">
-              <label className="block text-sm font-medium text-gray-700">Monthly Base Income</label>
+              <label className="block text-sm font-medium text-gray-700">Rendimento Base Mensal</label>
               <div className="mt-1 relative rounded-md shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <span className="text-gray-500 sm:text-sm">€</span>
@@ -495,8 +480,8 @@ export default function Income() {
                 <input
                   type="number"
                   step="0.01"
-                  value={baseIncomeAmount}
-                  onChange={(e) => setBaseIncomeAmount(e.target.value)}
+                  value={baseIncomeMontante}
+                  onChange={(e) => setBaseIncomeMontante(e.target.value)}
                   className="block w-full pl-7 rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                   required
                   placeholder="0.00"
@@ -509,28 +494,28 @@ export default function Income() {
                 onClick={() => {
                   setShowBaseIncomeForm(false);
                   setEditingUser(null);
-                  setBaseIncomeAmount('');
+                  setBaseIncomeMontante('');
                 }}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                Cancel
+                Cancelar
               </button>
               <button
                 type="submit"
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                Update Base Income
+                Atualizar Rendimento Base
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Extra Incomes Table */}
+      {/* Rendimento Extras Table */}
       {loading ? (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-blue-600"></div>
-          <p className="mt-2 text-gray-500">Loading...</p>
+          <p className="mt-2 text-gray-500">A carregar...</p>
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -539,22 +524,22 @@ export default function Income() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    From
+                    De
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Description
+                    Descrição
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
+                    Montante
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
+                    Data
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Type
+                    Tipo
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
+                    Ações
                   </th>
                 </tr>
               </thead>
@@ -565,16 +550,16 @@ export default function Income() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{income.description}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">€{income.amount.toFixed(2)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(income.date).toLocaleDateString()}
+                      {new Date(income.date).toLocaleDateString('pt-PT')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {income.recurring ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          Recurring
+                          Recorrente
                         </span>
                       ) : (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          One-time
+                          Único
                         </span>
                       )}
                     </td>

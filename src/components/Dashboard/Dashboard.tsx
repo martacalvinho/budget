@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import PurchasesList from '../PurchasesList';
 import AddPurchasePopup from '../AddPurchasePopup';
-import BankStatements from '../BankStatements/BankStatements';
 import { format, addMonths, subMonths, startOfMonth } from 'date-fns';
+import { pt } from 'date-fns/locale';
 
 export default function Dashboard() {
   const [showAddPurchase, setShowAddPurchase] = useState(false);
@@ -13,10 +13,10 @@ export default function Dashboard() {
   const handlePreviousMonth = () => {
     setSelectedMonth(prev => {
       const newDate = startOfMonth(subMonths(prev, 1));
-      console.log('Previous month:', {
+      console.log('Mês anterior:', {
         current: format(prev, 'yyyy-MM-dd'),
         new: format(newDate, 'yyyy-MM-dd'),
-        month: format(newDate, 'MMMM yyyy')
+        month: format(newDate, 'MMMM yyyy', { locale: pt })
       });
       return newDate;
     });
@@ -25,10 +25,10 @@ export default function Dashboard() {
   const handleNextMonth = () => {
     setSelectedMonth(prev => {
       const newDate = startOfMonth(addMonths(prev, 1));
-      console.log('Next month:', {
+      console.log('Próximo mês:', {
         current: format(prev, 'yyyy-MM-dd'),
         new: format(newDate, 'yyyy-MM-dd'),
-        month: format(newDate, 'MMMM yyyy')
+        month: format(newDate, 'MMMM yyyy', { locale: pt })
       });
       return newDate;
     });
@@ -41,12 +41,10 @@ export default function Dashboard() {
       </div>
 
       <div className="space-y-6">
-        <BankStatements />
-        
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-4">
-              <h2 className="text-xl font-bold">Recent Purchases</h2>
+              <h2 className="text-xl font-bold">Compras Recentes</h2>
               <div className="flex items-center gap-2">
                 <button
                   onClick={handlePreviousMonth}
@@ -54,8 +52,8 @@ export default function Dashboard() {
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </button>
-                <span className="text-sm font-medium min-w-[100px] text-center">
-                  {format(selectedMonth, 'MMMM yyyy')}
+                <span className="text-sm font-medium min-w-[100px] text-center" data-component-name="Dashboard">
+                  {format(selectedMonth, 'MMMM yyyy', { locale: pt })}
                 </span>
                 <button
                   onClick={handleNextMonth}
@@ -70,7 +68,7 @@ export default function Dashboard() {
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
             >
               <Plus className="h-5 w-5" />
-              Add Purchase
+              Adicionar Compra
             </button>
           </div>
           <PurchasesList 

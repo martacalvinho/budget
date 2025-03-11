@@ -25,10 +25,10 @@ const UserManagement: React.FC = () => {
       if (error) throw error;
       
       await refreshUsers();
-      toast.success('User added successfully');
+      toast.success('Utilizador adicionado com sucesso');
     } catch (error) {
       console.error('Error adding user:', error);
-      toast.error('Failed to add user');
+      toast.error('Falha ao adicionar utilizador');
     }
   };
 
@@ -45,10 +45,10 @@ const UserManagement: React.FC = () => {
       
       setEditingUser(null);
       await refreshUsers();
-      toast.success('User updated successfully');
+      toast.success('Utilizador atualizado com sucesso');
     } catch (error) {
       console.error('Error updating user:', error);
-      toast.error('Failed to update user');
+      toast.error('Falha ao atualizar utilizador');
     }
   };
 
@@ -62,22 +62,22 @@ const UserManagement: React.FC = () => {
       if (error) throw error;
       
       await refreshUsers();
-      toast.success('User deleted successfully');
+      toast.success('Utilizador eliminado com sucesso');
     } catch (error) {
       console.error('Error deleting user:', error);
-      toast.error('Failed to delete user');
+      toast.error('Falha ao eliminar utilizador');
     }
   };
 
   if (loading) {
-    return <div className="p-4">Loading users...</div>;
+    return <div className="p-4">A carregar utilizadores...</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow">
         <h2 className="text-xl font-semibold mb-4">
-          {editingUser ? 'Edit User' : 'Add New User'}
+          {editingUser ? 'Editar Utilizador' : 'Adicionar Novo Utilizador'}
         </h2>
         <UserForm
           initialData={editingUser ?? undefined}
@@ -86,7 +86,7 @@ const UserManagement: React.FC = () => {
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-4">User List</h2>
+        <h2 className="text-xl font-semibold mb-4">Lista de Utilizadores</h2>
         <UserList
           users={users}
           onEdit={setEditingUser}

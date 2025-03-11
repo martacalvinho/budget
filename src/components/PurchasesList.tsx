@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
+import { pt } from 'date-fns/locale';
 import { Trash2, Users, Split } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -73,8 +74,8 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
       })));
       setPurchases(data || []);
     } catch (error) {
-      console.error('Error fetching purchases:', error);
-      toast.error('Failed to load purchases');
+      console.error('Erro ao obter compras:', error);
+      toast.error('Falha ao carregar compras');
     } finally {
       setLoading(false);
     }
@@ -89,25 +90,25 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
 
       if (error) throw error;
       setPurchases(purchases.filter(p => p.id !== id));
-      toast.success('Purchase deleted successfully');
+      toast.success('Compra eliminada com sucesso');
     } catch (error) {
-      console.error('Error deleting purchase:', error);
-      toast.error('Failed to delete purchase');
+      console.error('Erro ao eliminar a compra:', error);
+      toast.error('Falha ao eliminar a compra');
     }
   };
 
   const formatDate = (dateString: string) => {
     try {
       if (!dateString) return 'N/A';
-      return format(parseISO(dateString), 'dd.MM.yyyy');
+      return format(parseISO(dateString), 'dd.MM.yyyy', { locale: pt });
     } catch (error) {
-      return 'Invalid Date';
+      return 'Data Inválida';
     }
   };
 
   const getUserName = (userId: string) => {
     const user = users.find(u => u.id === userId);
-    return user?.name || 'Unknown User';
+    return user?.name || 'Utilizador Desconhecido';
   };
 
   // Apply filters
@@ -163,13 +164,13 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
   const netAmount = totals.received - totals.sent;
 
   if (loading) {
-    return <div className="text-center py-4">Loading...</div>;
+    return <div className="text-center py-4">A carregar...</div>;
   }
 
   if (Object.keys(groupedPurchases).length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
-        No purchases found
+        Nenhuma compra encontrada
       </div>
     );
   }
@@ -178,19 +179,19 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
     <div className="overflow-x-auto">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
-          <h2 className="text-2xl font-bold">Recent Purchases</h2>
+          <h2 className="text-2xl font-bold">Compras Recentes</h2>
         </div>
         <div className="flex items-center gap-6 mr-4">
           <div className="flex flex-col items-end">
-            <span className="text-sm text-gray-500">Total Received</span>
+            <span className="text-sm text-gray-500">Total Recebido</span>
             <span className="text-lg font-semibold text-green-600">+€{totals.received.toFixed(2)}</span>
           </div>
           <div className="flex flex-col items-end">
-            <span className="text-sm text-gray-500">Total Sent</span>
+            <span className="text-sm text-gray-500">Total Enviado</span>
             <span className="text-lg font-semibold text-red-600">-€{Math.abs(totals.sent).toFixed(2)}</span>
           </div>
           <div className="flex flex-col items-end">
-            <span className="text-sm text-gray-500">Net Amount</span>
+            <span className="text-sm text-gray-500">Montante Líquido</span>
             <span className={`text-lg font-semibold ${netAmount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {netAmount >= 0 ? '+' : ''}{netAmount.toFixed(2)}
             </span>
@@ -200,12 +201,12 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Users</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Utilizadores</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</th>
+            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Montante</th>
+            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
@@ -221,7 +222,7 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
                     {purchase.users.length > 1 ? (
                       <>
                         <Split className="h-4 w-4 text-blue-500" />
-                        <span className="text-blue-600">Split {purchase.users.length} ways</span>
+                        <span className="text-blue-600">Dividido por {purchase.users.length}</span>
                       </>
                     ) : (
                       <>
@@ -251,7 +252,7 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
                     </span>
                     {purchase.users.length > 1 && (
                       <span className="text-xs text-gray-500">
-                        €{Math.abs(purchase.amount).toFixed(2)} per person
+                        €{Math.abs(purchase.amount).toFixed(2)} por pessoa
                       </span>
                     )}
                   </div>

@@ -3,10 +3,6 @@ import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import { Trash2 } from 'lucide-react';
 import { useCategories } from '../../hooks/useCategories';
-import type { Database } from '../../types/database';
-
-type Category = Database['public']['Tables']['categories']['Row'];
-
 interface CategoryManagementProps {
   type: 'fixed' | 'flexible';
 }
@@ -25,7 +21,7 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({ type }) => {
       .filter(cat => cat.length > 0);
 
     if (categoryNames.length === 0) {
-      toast.error('Category name cannot be empty');
+      toast.error('O nome da categoria não pode estar vazio');
       return;
     }
 
@@ -37,7 +33,7 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({ type }) => {
     );
 
     if (duplicates.length > 0) {
-      toast.error(`Categories already exist: ${duplicates.join(', ')}`);
+      toast.error(`Categorias já existem: ${duplicates.join(', ')}`);
       return;
     }
 
@@ -58,12 +54,12 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({ type }) => {
       await fetchCategories();
       toast.success(
         categoryNames.length === 1
-          ? 'Category added successfully'
-          : `${categoryNames.length} categories added successfully`
+          ? 'Categoria adicionada com sucesso'
+          : `${categoryNames.length} categorias adicionadas com sucesso`
       );
     } catch (error) {
       console.error('Error adding categories:', error);
-      toast.error('Failed to add categories');
+      toast.error('Falha ao adicionar categorias');
     }
   };
 
@@ -80,13 +76,13 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({ type }) => {
       if (status === 204) {
         // Force an immediate refetch
         await fetchCategories();
-        toast.success('Category deleted successfully');
+        toast.success('Categoria eliminada com sucesso');
       } else {
         throw new Error('Unexpected response from server');
       }
     } catch (error) {
       console.error('Error deleting category:', error);
-      toast.error('Failed to delete category');
+      toast.error('Falha ao eliminar categoria');
     }
   };
 
@@ -96,9 +92,9 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({ type }) => {
     return (
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-xl font-bold mb-4">
-          {type === 'fixed' ? 'Fixed' : 'Flexible'} Categories
+          Categorias {type === 'fixed' ? 'Fixas' : 'Flexíveis'}
         </h2>
-        <div className="text-center py-4">Loading categories...</div>
+        <div className="text-center py-4">A carregar categorias...</div>
       </div>
     );
   }
@@ -106,14 +102,14 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({ type }) => {
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <h2 className="text-xl font-bold mb-4">
-        {type === 'fixed' ? 'Fixed' : 'Flexible'} Categories
+        {type === 'fixed' ? 'Categorias Fixas' : 'Categorias Flexíveis'}
       </h2>
       
       <form onSubmit={handleAddCategory} className="mb-6">
         <div className="flex gap-4">
           <input
             type="text"
-            placeholder={type === 'fixed' ? "Category name" : "Category names (comma-separated)"}
+            placeholder={type === 'fixed' ? "Nome da categoria" : "Nomes das categorias (separados por vírgula)"}
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
             className="flex-1 rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2"
@@ -123,7 +119,7 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({ type }) => {
             type="submit"
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap"
           >
-            Add {type === 'fixed' ? 'Category' : 'Categories'}
+            Adicionar {type === 'fixed' ? 'Categoria' : 'Categorias'}
           </button>
         </div>
       </form>
@@ -138,7 +134,7 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({ type }) => {
             <button
               onClick={() => handleDeleteCategory(category.id)}
               className="text-red-600 hover:text-red-800 transition-colors p-2 rounded hover:bg-red-50"
-              title="Delete category"
+              title="Eliminar categoria"
             >
               <Trash2 size={18} />
             </button>
@@ -146,7 +142,7 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({ type }) => {
         ))}
         {filteredCategories.length === 0 && (
           <div className="text-gray-500 text-center py-4">
-            No {type} categories added yet
+            Sem categorias {type === 'fixed' ? 'fixas' : 'flexíveis'} adicionadas
           </div>
         )}
       </div>

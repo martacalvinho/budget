@@ -1,12 +1,14 @@
 import React from 'react';
 import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
-import { Edit2, Save } from 'lucide-react';
+import pt from 'date-fns/locale/pt';
+import { Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCategories } from '../../hooks/useCategories';
 
-interface YearlyBudgetProps {
-  initialYear?: string;
+export interface YearlyBudgetProps {
+  year: string;
+  onYearChange: (year: string) => void;
 }
 
 interface MonthlyData {
@@ -25,13 +27,19 @@ interface IncomeData {
   [month: string]: number;
 }
 
-export default function YearlyBudget({ initialYear = new Date().getFullYear().toString() }: YearlyBudgetProps) {
+export default function YearlyBudget({ year, onYearChange }: YearlyBudgetProps) {
   const { categories } = useCategories();
-  const [selectedYear, setSelectedYear] = React.useState(initialYear);
+  const [selectedYear, setSelectedYear] = React.useState(year);
+
+  React.useEffect(() => {
+    if (selectedYear !== year) {
+      onYearChange(selectedYear);
+    }
+  }, [selectedYear, year, onYearChange]);
   const [actualData, setActualData] = React.useState<MonthlyData>({});
   const [budgetData, setBudgetData] = React.useState<BudgetData>({});
   const [budgetedIncome, setBudgetedIncome] = React.useState<IncomeData>({});
-  const [loading, setLoading] = React.useState(true);
+  const [carregando, setCarregando] = React.useState(true);
   const [income, setIncome] = React.useState<{ [month: string]: number }>({});
   const [savings, setSavings] = React.useState<{ [month: string]: number }>({});
   const [mode, setMode] = React.useState<'budget' | 'actual'>('budget');
@@ -62,7 +70,7 @@ export default function YearlyBudget({ initialYear = new Date().getFullYear().to
       const total = data?.reduce((sum, account) => sum + Number(account.balance), 0) || 0;
       setTotalSavings(total);
     } catch (error) {
-      console.error('Error fetching savings:', error);
+      console.error('Erro ao buscar poupanças:', error);
     }
   };
 
@@ -104,8 +112,8 @@ export default function YearlyBudget({ initialYear = new Date().getFullYear().to
       setBudgetData(budgetTemp);
       setBudgetedIncome(incomeTemp);
     } catch (error) {
-      console.error('Error fetching budget data:', error);
-      toast.error('Failed to load budget data');
+      console.error('Erro ao buscar dados do orçamento:', error);
+      toast.error('Falha ao carregar dados do orçamento');
     }
   };
 
@@ -127,7 +135,7 @@ export default function YearlyBudget({ initialYear = new Date().getFullYear().to
       const savingsTemp: { [month: string]: number } = {};
 
       purchaseData?.forEach(purchase => {
-        const month = format(new Date(purchase.date), 'MMMM');
+        const month = format(new Date(purchase.date), 'MMMM', { locale: pt });
         const amount = Number(purchase.amount);
 
         if (!actualTemp[purchase.category]) {
@@ -148,15 +156,15 @@ export default function YearlyBudget({ initialYear = new Date().getFullYear().to
       setIncome(incomeTemp);
       setSavings(savingsTemp);
     } catch (error) {
-      console.error('Error fetching actual data:', error);
-      toast.error('Failed to load actual spending data');
+      console.error('Erro ao buscar dados reais:', error);
+      toast.error('Falha ao carregar dados de gastos reais');
     }
   };
 
   const handleCellEdit = async (category: string, month: string, value: string, type?: 'income') => {
     const amount = parseFloat(value);
     if (isNaN(amount)) {
-      toast.error('Please enter a valid number');
+      toast.error('Por favor, insira um número válido');
       return;
     }
 
@@ -179,8 +187,8 @@ export default function YearlyBudget({ initialYear = new Date().getFullYear().to
       }
 
     } catch (error) {
-      console.error('Error updating budget:', error);
-      toast.error('Failed to update budget');
+      console.error('Erro ao atualizar orçamento:', error);
+      toast.error('Falha ao atualizar orçamento');
     }
   };
 
@@ -207,7 +215,7 @@ export default function YearlyBudget({ initialYear = new Date().getFullYear().to
     }));
 
     setEditingCell(null);
-    toast.success('Budget updated');
+    toast.success('Orçamento atualizado');
   };
 
   const handleFillRestOfMonths = async (fill: boolean) => {
@@ -225,10 +233,10 @@ export default function YearlyBudget({ initialYear = new Date().getFullYear().to
         .map(month => saveYearlyBudget(fillValue.category, month, fillValue.value));
       
       await Promise.all(promises);
-      toast.success('Updated remaining months');
+      toast.success('Meses restantes atualizados');
     } catch (error) {
-      console.error('Error filling months:', error);
-      toast.error('Failed to fill remaining months');
+      console.error('Erro ao preencher meses:', error);
+      toast.error('Falha ao preencher meses restantes');
     }
 
     setShowFillPrompt(false);
@@ -256,17 +264,17 @@ export default function YearlyBudget({ initialYear = new Date().getFullYear().to
   };
 
   const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
   ];
 
   const data = mode === 'budget' ? budgetData : actualData;
 
   React.useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
+      setCarregando(true);
       await Promise.all([fetchBudgetData(), fetchActualData(), fetchTotalSavings()]);
-      setLoading(false);
+      setCarregando(false);
     };
     fetchData();
   }, [selectedYear, categories]);
@@ -281,8 +289,8 @@ export default function YearlyBudget({ initialYear = new Date().getFullYear().to
     return { fixedCategories, flexibleCategories };
   }, [categories]);
 
-  if (loading) {
-    return <div className="text-center py-4">Loading yearly data...</div>;
+  if (carregando) {
+    return <div className="text-center py-4">A carregar dados anuais...</div>;
   }
 
   return (
@@ -307,7 +315,7 @@ export default function YearlyBudget({ initialYear = new Date().getFullYear().to
                   : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
               }`}
             >
-              Budget
+              Orçamento
             </button>
             <button
               onClick={() => setMode('actual')}
@@ -317,7 +325,7 @@ export default function YearlyBudget({ initialYear = new Date().getFullYear().to
                   : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
               }`}
             >
-              Actual
+              Real
             </button>
           </div>
         </div>
@@ -327,17 +335,17 @@ export default function YearlyBudget({ initialYear = new Date().getFullYear().to
         <table className="min-w-full bg-white border">
           <thead>
             <tr className="bg-gray-100">
-              <th className="border p-2 sticky left-0 bg-gray-100">Category</th>
+              <th className="border p-2 sticky left-0 bg-gray-100">Categoria</th>
               {months.map(month => (
                 <th key={month} className="border p-2 text-right min-w-[100px]">{month}</th>
               ))}
-              <th className="border p-2 text-right">Average</th>
+              <th className="border p-2 text-right">Média</th>
             </tr>
           </thead>
           <tbody>
             {/* Fixed Expenses */}
             <tr className="bg-gray-50">
-              <td colSpan={14} className="border p-2 font-semibold">Fixed Expenses</td>
+              <td colSpan={14} className="border p-2 font-semibold">Despesas Fixas</td>
             </tr>
             {categories.filter(cat => cat.type === 'fixed').map(cat => (
               <tr key={cat.name}>
@@ -396,7 +404,7 @@ export default function YearlyBudget({ initialYear = new Date().getFullYear().to
               </tr>
             ))}
             <tr className="font-semibold bg-gray-50">
-              <td className="border p-2 sticky left-0 bg-gray-50">TOTAL (fixed)</td>
+              <td className="border p-2 sticky left-0 bg-gray-50">TOTAL (fixo)</td>
               {months.map(month => (
                 <td key={month} className="border p-2 text-right text-red-600">
                   €{calculateTotal(categories.filter(cat => cat.type === 'fixed').map(cat => cat.name), month).toFixed(2)}
@@ -409,7 +417,7 @@ export default function YearlyBudget({ initialYear = new Date().getFullYear().to
 
             {/* Flexible Expenses */}
             <tr className="bg-gray-50">
-              <td colSpan={14} className="border p-2 font-semibold">Flexible Expenses</td>
+              <td colSpan={14} className="border p-2 font-semibold">Despesas Flexíveis</td>
             </tr>
             {categories.filter(cat => cat.type === 'flexible').map(cat => (
               <tr key={cat.name}>
@@ -468,7 +476,7 @@ export default function YearlyBudget({ initialYear = new Date().getFullYear().to
               </tr>
             ))}
             <tr className="font-semibold bg-gray-50">
-              <td className="border p-2 sticky left-0 bg-gray-50">TOTAL (flexible)</td>
+              <td className="border p-2 sticky left-0 bg-gray-50">TOTAL (flexível)</td>
               {months.map(month => (
                 <td key={month} className="border p-2 text-right text-red-600">
                   €{calculateTotal(categories.filter(cat => cat.type === 'flexible').map(cat => cat.name), month).toFixed(2)}
@@ -481,7 +489,7 @@ export default function YearlyBudget({ initialYear = new Date().getFullYear().to
 
             {/* Summary Section */}
             <tr className="font-semibold">
-              <td className="border p-2 sticky left-0 bg-white">Income</td>
+              <td className="border p-2 sticky left-0 bg-white">Rendimento</td>
               {months.map(month => (
                 <td key={month} className="border p-2 text-right text-green-600">
                   {mode === 'budget' ? (
@@ -531,7 +539,7 @@ export default function YearlyBudget({ initialYear = new Date().getFullYear().to
             </tr>
 
             <tr className="font-semibold">
-              <td className="border p-2 sticky left-0 bg-white">Expenses</td>
+              <td className="border p-2 sticky left-0 bg-white">Despesas</td>
               {months.map(month => {
                 const totalExpenses = mode === 'budget'
                   ? calculateTotal([...categories.filter(cat => cat.type === 'fixed').map(cat => cat.name), ...categories.filter(cat => cat.type === 'flexible').map(cat => cat.name)], month)
@@ -550,7 +558,7 @@ export default function YearlyBudget({ initialYear = new Date().getFullYear().to
             </tr>
 
             <tr className="font-semibold">
-              <td className="border p-2 sticky left-0 bg-white">Savings</td>
+              <td className="border p-2 sticky left-0 bg-white">Poupanças</td>
               {months.map(month => {
                 const monthlyIncome = mode === 'budget' ? budgetedIncome[month] || 0 : income[month] || 0;
                 const monthlyExpenses = mode === 'budget'
@@ -578,14 +586,14 @@ export default function YearlyBudget({ initialYear = new Date().getFullYear().to
 
       {/* Savings Projection */}
       <div className="mt-8 p-6 bg-white rounded-lg shadow">
-        <h3 className="text-xl font-semibold mb-4">Savings Projection</h3>
+        <h3 className="text-xl font-semibold mb-4">Projeção de Poupanças</h3>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-gray-600">Beginning Balance {selectedYear}</p>
+            <p className="text-gray-600">Saldo Inicial {selectedYear}</p>
             <p className="text-xl font-semibold">€{totalSavings.toFixed(2)}</p>
           </div>
           <div>
-            <p className="text-gray-600">End Balance {selectedYear}</p>
+            <p className="text-gray-600">Saldo Final {selectedYear}</p>
             <p className="text-xl font-semibold">
               €{(totalSavings + (mode === 'budget'
                 ? Object.values(budgetedIncome).reduce((a, b) => a + b, 0) - 

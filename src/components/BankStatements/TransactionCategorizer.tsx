@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, Tag, Users, Split } from 'lucide-react';
+import { Users, Split } from 'lucide-react';
 import { useCategories } from '../../hooks/useCategories';
 import { ParsedTransaction } from '../../utils/bankStatementParser';
 import { useUsers } from '../../contexts/UserContext';
@@ -22,12 +22,12 @@ const TransactionCategorizer: React.FC<TransactionCategorizerProps> = ({
 
   const handleSave = async () => {
     if (!category) {
-      toast.error('Please select a category');
+      toast.error('Por favor selecione uma categoria');
       return;
     }
 
     if (selectedUsers.length === 0) {
-      toast.error('Please assign at least one user');
+      toast.error('Por favor atribua pelo menos um utilizador');
       return;
     }
 
@@ -39,7 +39,7 @@ const TransactionCategorizer: React.FC<TransactionCategorizerProps> = ({
         users: selectedUsers
       });
     } catch (error) {
-      console.error('Error saving transaction:', error);
+      console.error('Erro ao guardar transação:', error);
     } finally {
       setSaving(false);
     }
@@ -64,7 +64,7 @@ const TransactionCategorizer: React.FC<TransactionCategorizerProps> = ({
       <td className="px-6 py-4">
         <p className="text-sm font-medium text-gray-900">{transaction.description}</p>
         {transaction.cardNumber && (
-          <p className="text-xs text-gray-500">Card: {transaction.cardNumber}</p>
+          <p className="text-xs text-gray-500">Cartão: {transaction.cardNumber}</p>
         )}
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
@@ -80,7 +80,7 @@ const TransactionCategorizer: React.FC<TransactionCategorizerProps> = ({
           </span>
           {isSplit && (
             <p className="text-xs text-gray-500">
-              €{(Math.abs(amount) / selectedUsers.length).toFixed(2)} per person
+              €{(Math.abs(amount) / selectedUsers.length).toFixed(2)} por pessoa
             </p>
           )}
         </div>
@@ -108,8 +108,8 @@ const TransactionCategorizer: React.FC<TransactionCategorizerProps> = ({
           onChange={(e) => setCategory(e.target.value)}
           className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
         >
-          <option value="">Select category...</option>
-          <optgroup label="Fixed Expenses">
+          <option value="">Selecione categoria...</option>
+          <optgroup label="Despesas Fixas">
             {categories
               .filter(cat => cat.type === 'fixed')
               .map(cat => (
@@ -119,7 +119,7 @@ const TransactionCategorizer: React.FC<TransactionCategorizerProps> = ({
               ))
             }
           </optgroup>
-          <optgroup label="Flexible Expenses">
+          <optgroup label="Despesas Flexíveis">
             {categories
               .filter(cat => cat.type === 'flexible')
               .map(cat => (
@@ -137,7 +137,7 @@ const TransactionCategorizer: React.FC<TransactionCategorizerProps> = ({
           disabled={saving || !category || selectedUsers.length === 0}
           className="text-blue-600 hover:text-blue-900 disabled:opacity-50 disabled:hover:text-blue-600"
         >
-          Save
+          Guardar
         </button>
       </td>
     </tr>

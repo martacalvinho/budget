@@ -10,8 +10,10 @@ export default function BankStatements() {
   const [transactions, setTransactions] = useState<ParsedTransaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [statementYear, setStatementYear] = useState<number>(new Date().getFullYear());
-  const { users } = useUsers();
+  // Year is tracked but not currently used in filtering
+  const [, setStatementYear] = useState<number>(new Date().getFullYear());
+  // Users context is imported but not directly used in this component
+  const { } = useUsers();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -39,12 +41,12 @@ export default function BankStatements() {
       }
       
       setTransactions(parsedTx);
-      toast.success(`Parsed ${parsedTx.length} transactions`);
+      toast.success(`Analisadas ${parsedTx.length} transações`);
     } catch (error) {
       console.error('Error parsing PDF:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       setError(errorMessage);
-      toast.error('Failed to parse bank statement');
+      toast.error('Falha ao analisar o extrato bancário');
     } finally {
       setLoading(false);
     }
@@ -78,12 +80,12 @@ export default function BankStatements() {
       })) || [];
 
       if (purchases.length === 0) {
-        throw new Error('No users assigned to this transaction');
+        throw new Error('Nenhum utilizador atribuído a esta transação');
       }
 
       console.log('Saving purchases:', purchases);
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('purchases')
         .insert(purchases);
 
@@ -92,7 +94,7 @@ export default function BankStatements() {
         throw error;
       }
 
-      toast.success('Transaction saved successfully');
+      toast.success('Transação guardada com sucesso');
       
       // Remove the transaction from the list
       setTransactions(prev => prev.filter(t => 
@@ -113,10 +115,10 @@ export default function BankStatements() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Bank Statements</h2>
+        <h2 className="text-2xl font-bold">Extratos Bancários</h2>
         <label className="cursor-pointer bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2">
           <Upload className="h-5 w-5" />
-          Upload Statement
+          Carregar Extrato
           <input
             type="file"
             accept="application/pdf"
@@ -136,7 +138,7 @@ export default function BankStatements() {
       {loading && (
         <div className="text-center py-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Processing bank statement...</p>
+          <p className="mt-2 text-gray-600">A processar o extrato bancário...</p>
         </div>
       )}
 
@@ -145,12 +147,12 @@ export default function BankStatements() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Users</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montante</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Utilizadores</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
