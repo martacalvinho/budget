@@ -12,13 +12,24 @@ import Login from './components/Auth/Login';
 import BudgetManagement from './components/Budget/BudgetManagement';
 import BankStatements from './components/BankStatements/BankStatements';
 import SavingsManagement from './components/Savings/SavingsManagement';
+import LandingPage from './components/LandingPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuthContext();
   return user ? <>{children}</> : <Navigate to="/login" />;
 }
 
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthContext();
+  return user ? <Navigate to="/dashboard" /> : <>{children}</>;
+}
+
 function App() {
+  const handleGetStarted = () => {
+    // Esta função será passada para a LandingPage para redirecionar para login
+    window.location.href = '/login';
+  };
+
   return (
     <AuthProvider>
       <UserProvider>
@@ -28,6 +39,14 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route
               path="/"
+              element={
+                <PublicRoute>
+                  <LandingPage onGetStarted={handleGetStarted} />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
               element={
                 <PrivateRoute>
                   <Layout>

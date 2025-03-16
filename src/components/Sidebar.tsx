@@ -26,18 +26,18 @@ const Sidebar: React.FC<SidebarProps> = ({
   onSignOut,
 }) => {
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'income', label: 'Income', icon: DollarSign },
-    { id: 'analytics', label: 'Analytics', icon: BarChart2 },
-    { id: 'predictions', label: 'Predictions', icon: TrendingUp },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'dashboard', label: 'Painel', icon: LayoutDashboard },
+    { id: 'income', label: 'Rendimento', icon: DollarSign },
+    { id: 'analytics', label: 'Análises', icon: BarChart2 },
+    { id: 'predictions', label: 'Previsões', icon: TrendingUp },
+    { id: 'settings', label: 'Definições', icon: Settings },
   ];
 
   return (
     <div className="w-64 bg-gray-800 text-white fixed h-full flex flex-col">
       <div className="px-6 py-4 flex items-center gap-2 border-b border-gray-700">
         <Wallet className="h-6 w-6" />
-        <span className="text-xl font-bold">Finance App</span>
+        <span className="text-xl font-bold">Aplicação de Orçamento</span>
       </div>
       <div className="flex-grow px-4 py-4">
         {menuItems.map((item) => {
@@ -65,7 +65,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             onClick={onSignOut}
           >
             <LogOut className="h-5 w-5" />
-            Logout
+            Terminar Sessão
           </button>
         ) : (
           <button
@@ -73,7 +73,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             onClick={onAuthClick}
           >
             <LogIn className="h-5 w-5" />
-            Login / Sign Up
+            Iniciar Sessão / Registar
           </button>
         )}
       </div>
