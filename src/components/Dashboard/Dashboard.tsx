@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import PurchasesList from '../PurchasesList';
 import AddPurchasePopup from '../AddPurchasePopup';
@@ -6,6 +6,7 @@ import { format, addMonths, subMonths, startOfMonth } from 'date-fns';
 import { pt } from 'date-fns/locale';
 
 export default function Dashboard() {
+  const purchasesListRef = React.useRef<{ fetchPurchases: () => Promise<void> }>(null);
   const [showAddPurchase, setShowAddPurchase] = useState(false);
   // Always start with first day of current month
   const [selectedMonth, setSelectedMonth] = useState(() => startOfMonth(new Date()));
@@ -72,6 +73,7 @@ export default function Dashboard() {
             </button>
           </div>
           <PurchasesList 
+            ref={purchasesListRef}
             filters={{ 
               date: selectedMonth
             }} 
@@ -83,6 +85,10 @@ export default function Dashboard() {
         <AddPurchasePopup
           onClose={() => setShowAddPurchase(false)}
           onPurchaseAdded={() => {
+            // Refresh purchases list
+            if (purchasesListRef.current) {
+              purchasesListRef.current.fetchPurchases();
+            }
             setShowAddPurchase(false);
           }}
         />

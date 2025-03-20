@@ -8,44 +8,71 @@ import type { Database } from '../../types/database';
 import UserList from './UserManagement/UserList';
 import UserForm from './UserManagement/UserForm';
 
+// Type for reading from users view
 type User = Database['public']['Tables']['users']['Row'];
-type UserInsert = Database['public']['Tables']['users']['Insert'];
+
+// Type for writing to user_profiles table
+interface UserProfileData {
+  name: string;
+  type: 'Adult' | 'Child';
+  monthly_income: number;
+  card_number?: string | null;
+}
 
 const UserManagement: React.FC = () => {
   const { users, loading, refreshUsers } = useUsers();
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  const handleAddUser = async (userData: UserInsert) => {
-    try {
-      const { error } = await supabase
-        .from('users')
-        .insert(userData);
 
-      if (error) throw error;
+
+  const handleAddUser = async (userData: UserProfileData) => {
+    try {
+      // Call the insert_user_profile function
+      const { error } = await supabase.rpc('insert_user_profile', {
+        p_name: userData.name,
+        p_type: userData.type,
+        p_monthly_income: userData.monthly_income,
+        p_card_number: userData.card_number || null
+      });
+
+      if (error) {
+        console.error('Error calling insert_user_profile:', error);
+        throw new Error(error.message || 'Falha ao adicionar utilizador');
+      }
       
       await refreshUsers();
-      toast.success('Utilizador adicionado com sucesso');
-    } catch (error) {
+      toast.success('Utilizador adicionado com sucesso!');
+    } catch (error: any) {
       console.error('Error adding user:', error);
-      toast.error('Falha ao adicionar utilizador');
+      toast.error(error.message || 'Não foi possível adicionar o utilizador');
+      console.error('Error adding user:', error);
     }
   };
 
-  const handleUpdateUser = async (userData: UserInsert) => {
+  const handleUpdateUser = async (userData: UserProfileData) => {
     if (!editingUser) return;
 
     try {
+      // When updating, we only update the fields from UserProfileData
+      const updateData = {
+        name: userData.name,
+        type: userData.type,
+        monthly_income: parseFloat(String(userData.monthly_income)) || 0,
+        card_number: userData.card_number || null
+      };
+
+      // Update the user_profiles table
       const { error } = await supabase
-        .from('users')
-        .update(userData)
+        .from('user_profiles')
+        .update(updateData)
         .eq('id', editingUser.id);
 
       if (error) throw error;
       
       setEditingUser(null);
       await refreshUsers();
-      toast.success('Utilizador atualizado com sucesso');
+      toast.success('Utilizador atualizado com sucesso!');
     } catch (error) {
       console.error('Error updating user:', error);
       toast.error('Falha ao atualizar utilizador');
@@ -54,15 +81,16 @@ const UserManagement: React.FC = () => {
 
   const handleDeleteUser = async (userId: string) => {
     try {
+      // Delete from user_profiles table directly
       const { error } = await supabase
-        .from('users')
+        .from('user_profiles')
         .delete()
         .eq('id', userId);
 
       if (error) throw error;
       
       await refreshUsers();
-      toast.success('Utilizador eliminado com sucesso');
+      toast.success('Utilizador eliminado com sucesso!');
     } catch (error) {
       console.error('Error deleting user:', error);
       toast.error('Falha ao eliminar utilizador');
@@ -70,7 +98,7 @@ const UserManagement: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="p-4">A carregar utilizadores...</div>;
+    return <div className="p-4 text-gray-600">A carregar utilizadores...</div>;
   }
 
   return (

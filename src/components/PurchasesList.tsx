@@ -17,15 +17,10 @@ interface PurchasesListProps {
   };
 }
 
-const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
+const PurchasesList = React.forwardRef<{ fetchPurchases: () => Promise<void> }, PurchasesListProps>(({ filters }, ref) => {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
   const { users } = useUsers();
-
-  useEffect(() => {
-    console.log('Filter date changed:', filters?.date);
-    fetchPurchases();
-  }, [filters?.date]); // Refetch when month changes
 
   const fetchPurchases = async () => {
     try {
@@ -35,29 +30,12 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
 
       // Apply date filter if present
       if (filters?.date) {
-        // Set the date to the first of the selected month to ensure correct month filtering
         const filterDate = new Date(filters.date.getFullYear(), filters.date.getMonth(), 1);
         const start = startOfMonth(filterDate);
         const end = endOfMonth(filterDate);
         const startStr = format(start, 'yyyy-MM-dd');
         const endStr = format(end, 'yyyy-MM-dd');
         
-        console.log('Fetching purchases for date range:', {
-          originalDate: filters.date,
-          filterDate,
-          startStr,
-          endStr,
-          filterMonth: filterDate.getMonth() + 1,
-          filterYear: filterDate.getFullYear()
-        });
-
-        // Debug query
-        const { data: debugData } = await query
-          .gte('date', startStr)
-          .lte('date', endStr);
-        
-        console.log('Debug - Raw query results:', debugData);
-
         query = query
           .gte('date', startStr)
           .lte('date', endStr);
@@ -66,12 +44,6 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
       const { data, error } = await query.order('date', { ascending: false });
 
       if (error) throw error;
-      console.log('Fetched purchases:', data?.map(p => ({
-        id: p.id,
-        date: p.date,
-        amount: p.amount,
-        description: p.description
-      })));
       setPurchases(data || []);
     } catch (error) {
       console.error('Erro ao obter compras:', error);
@@ -80,6 +52,10 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchPurchases();
+  }, [filters?.date]); // Refetch when month changes
 
   const handleDelete = async (id: string) => {
     try {
@@ -163,6 +139,11 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
 
   const netAmount = totals.received - totals.sent;
 
+  // Expose fetchPurchases via ref
+  React.useImperativeHandle(ref, () => ({
+    fetchPurchases
+  }));
+
   if (loading) {
     return <div className="text-center py-4">A carregar...</div>;
   }
@@ -176,7 +157,7 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto" data-component-name="PurchasesList">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
           <h2 className="text-2xl font-bold">Compras Recentes</h2>
@@ -271,6 +252,6 @@ const PurchasesList: React.FC<PurchasesListProps> = ({ filters }) => {
       </table>
     </div>
   );
-};
+});
 
 export default PurchasesList;

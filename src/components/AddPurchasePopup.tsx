@@ -48,12 +48,17 @@ const AddPurchasePopup: React.FC<AddPurchasePopupProps> = ({
       const amount = -Math.abs(parseFloat(formData.amount));
       const splitAmount = amount / formData.userIds.length;
 
+      // Get current user's auth id
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
       // Create purchases for each user
       const { error } = await supabase
         .from('purchases')
         .insert(
           formData.userIds.map(userId => ({
-            user_id: userId,
+            user_id: userId, // The users view already returns the user_profiles.id
+            owner_id: user.id, // Set owner_id to current user's auth id
             amount: splitAmount,
             category: formData.category,
             description: formData.description,
@@ -67,6 +72,7 @@ const AddPurchasePopup: React.FC<AddPurchasePopupProps> = ({
       
       toast.success('Compra adicionada com sucesso');
       onPurchaseAdded();
+      onClose(); // Close the popup after successful insert
     } catch (error) {
       console.error('Erro ao adicionar compra:', error);
       toast.error('Falha ao adicionar compra');

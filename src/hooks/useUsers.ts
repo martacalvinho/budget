@@ -3,6 +3,11 @@ import { supabase } from '../lib/supabase';
 import type { Database } from '../types/database';
 import toast from 'react-hot-toast';
 
+// Constants for table and view names
+const VIEW_NAME = 'users';
+const TABLE_NAME = 'user_profiles';
+
+// Type for reading from users view
 type User = Database['public']['Tables']['users']['Row'];
 
 export function useUsers() {
@@ -14,7 +19,7 @@ export function useUsers() {
     const fetchUsers = async () => {
       try {
         const { data, error } = await supabase
-          .from('users')
+          .from(VIEW_NAME)
           .select('*')
           .order('name');
 
@@ -23,7 +28,7 @@ export function useUsers() {
       } catch (err) {
         console.error('Error fetching users:', err);
         setError(err as Error);
-        toast.error('Failed to load users');
+        toast.error('Falha ao carregar utilizadores');
       } finally {
         setLoading(false);
       }
@@ -31,12 +36,12 @@ export function useUsers() {
 
     fetchUsers();
 
-    // Subscribe to realtime changes
+    // Subscribe to realtime changes in user_profiles table
     const subscription = supabase
-      .channel('users_changes')
+      .channel('user_profiles_changes')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'users' },
-        (payload) => {
+        { event: '*', schema: 'public', table: TABLE_NAME },
+        () => {
           fetchUsers(); // Refetch to ensure consistency
       })
       .subscribe();
@@ -49,13 +54,13 @@ export function useUsers() {
   const refreshUsers = async () => {
     setLoading(true);
     const { data, error } = await supabase
-      .from('users')
+      .from(VIEW_NAME)
       .select('*')
       .order('name');
 
     if (error) {
       console.error('Error refreshing users:', error);
-      toast.error('Failed to refresh users');
+      toast.error('Falha ao atualizar utilizadores');
       return;
     }
 

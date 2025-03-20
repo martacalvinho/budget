@@ -1,18 +1,25 @@
 import React, { useState } from 'react';
 import type { Database } from '../../../types/database';
 
+// Read from users view
 type User = Database['public']['Tables']['users']['Row'];
-type UserInsert = Database['public']['Tables']['users']['Insert'];
+
+// For writing, we use a custom type that matches user_profiles table
+interface UserProfileData {
+  name: string;
+  type: 'Adult' | 'Child';
+  monthly_income: number;
+  card_number?: string | null;
+}
 
 interface UserFormProps {
   initialData?: User;
-  onSubmit: (data: UserInsert) => Promise<void>;
+  onSubmit: (data: UserProfileData) => Promise<void>;
 }
 
 const UserForm: React.FC<UserFormProps> = ({ initialData, onSubmit }) => {
-  const [formData, setFormData] = useState<UserInsert>({
+  const [formData, setFormData] = useState<UserProfileData>({
     name: initialData?.name ?? '',
-    email: initialData?.email ?? '',
     type: initialData?.type ?? 'Adult',
     monthly_income: initialData?.monthly_income ?? 0,
     card_number: initialData?.card_number ?? ''
@@ -21,10 +28,11 @@ const UserForm: React.FC<UserFormProps> = ({ initialData, onSubmit }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Create a clean version of the data, omitting empty fields
-    const cleanData = {
-      ...formData,
-      email: formData.email?.trim() || null,
+    // Create a clean version of the data
+    const cleanData: UserProfileData = {
+      name: formData.name.trim(),
+      type: formData.type,
+      monthly_income: formData.monthly_income,
       card_number: formData.card_number?.trim() || null
     };
 
@@ -33,7 +41,6 @@ const UserForm: React.FC<UserFormProps> = ({ initialData, onSubmit }) => {
     if (!initialData) {
       setFormData({
         name: '',
-        email: '',
         type: 'Adult',
         monthly_income: 0,
         card_number: ''
@@ -56,18 +63,7 @@ const UserForm: React.FC<UserFormProps> = ({ initialData, onSubmit }) => {
             required
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Email (Opcional)
-          </label>
-          <input
-            type="email"
-            value={formData.email || ''}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            className="w-full p-2 border rounded-md"
-            placeholder="Opcional"
-          />
-        </div>
+
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

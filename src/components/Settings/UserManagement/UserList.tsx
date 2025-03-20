@@ -37,9 +37,9 @@ const UserList: React.FC<UserListProps> = ({
             <div className="text-sm text-gray-500 flex items-center gap-4">
               <span>{user.type}</span>
               {user.monthly_income > 0 && (
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1" title="Rendimento mensal">
                   <Wallet className="h-4 w-4" />
-                  €{user.monthly_income.toLocaleString('de-DE', { minimumFractionDigits: 2 })}
+                  €{user.monthly_income.toLocaleString('pt-PT', { minimumFractionDigits: 2 })}
                 </span>
               )}
               {user.email && <span>{user.email}</span>}
@@ -50,21 +50,21 @@ const UserList: React.FC<UserListProps> = ({
             <button
               onClick={() => onEdit(user)}
               className="p-2 text-blue-600 hover:text-blue-800"
-              title="Edit user"
+              title="Editar utilizador"
             >
               <Pencil className="h-5 w-5" />
             </button>
             <button
               onClick={() => onSelectSalaryHistory(user.id)}
               className="p-2 text-green-600 hover:text-green-800"
-              title="View salary history"
+              title="Ver histórico de rendimentos"
             >
               <Wallet className="h-5 w-5" />
             </button>
             <button
               onClick={() => onDelete(user.id)}
               className="p-2 text-red-600 hover:text-red-800"
-              title="Delete user"
+              title="Eliminar utilizador"
             >
               <Trash2 className="h-5 w-5" />
             </button>

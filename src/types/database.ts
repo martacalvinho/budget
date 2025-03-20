@@ -9,9 +9,12 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      // The users view combines user_profiles and auth.users
       users: {
         Row: {
           id: string
+          auth_user_id: string
+          owner_id: string
           email: string | null
           name: string
           type: 'Adult' | 'Child'
@@ -20,14 +23,31 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: {
-          email?: string | null
+        Insert: never  // View is not insertable
+        Update: never  // View is not updatable
+      },
+      // The actual user_profiles table
+      user_profiles: {
+        Row: {
+          id: string
+          auth_user_id: string
+          owner_id: string
           name: string
           type: 'Adult' | 'Child'
           monthly_income: number
+          card_number: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          auth_user_id: string
+          owner_id: string
+          name: string
+          type: 'Adult' | 'Child'
+          monthly_income?: number
           card_number?: string | null
         }
-        Update: Partial<Database['public']['Tables']['users']['Insert']>
+        Update: Partial<Omit<Database['public']['Tables']['user_profiles']['Insert'], 'auth_user_id' | 'owner_id'>>
       }
       salary_history: {
         Row: {
@@ -40,8 +60,14 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<SalaryHistory['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<SalaryHistory['Insert']>
+        Insert: {
+          user_id: string
+          amount: number
+          month: number
+          year: number
+          notes?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['salary_history']['Insert']>
       }
       purchases: {
         Row: {
@@ -55,8 +81,16 @@ export interface Database {
           split_between: number
           created_at: string
         }
-        Insert: Omit<Purchases['Row'], 'id' | 'created_at'>
-        Update: Partial<Purchases['Insert']>
+        Insert: {
+          user_id: string
+          amount: number
+          category: string
+          description?: string | null
+          date: string
+          total_amount?: number | null
+          split_between: number
+        }
+        Update: Partial<Database['public']['Tables']['purchases']['Insert']>
       }
       categories: {
         Row: {
@@ -65,8 +99,11 @@ export interface Database {
           type: 'fixed' | 'flexible'
           created_at: string
         }
-        Insert: Omit<Categories['Row'], 'id' | 'created_at'>
-        Update: Partial<Categories['Insert']>
+        Insert: {
+          name: string
+          type: 'fixed' | 'flexible'
+        }
+        Update: Partial<Database['public']['Tables']['categories']['Insert']>
       }
       savings: {
         Row: {
@@ -75,8 +112,11 @@ export interface Database {
           date: string
           created_at: string
         }
-        Insert: Omit<Savings['Row'], 'id' | 'created_at'>
-        Update: Partial<Savings['Insert']>
+        Insert: {
+          amount: number
+          date: string
+        }
+        Update: Partial<Database['public']['Tables']['savings']['Insert']>
       }
       budgets: {
         Row: {
