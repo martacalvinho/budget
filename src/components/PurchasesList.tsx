@@ -24,9 +24,36 @@ const PurchasesList = React.forwardRef<{ fetchPurchases: () => Promise<void> }, 
 
   const fetchPurchases = async () => {
     try {
+      // Get current user's profile
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated');
+        return;
+      }
+      
+      // Get current user's profile ID
+      const { data: profiles, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+      
+      if (profileError) {
+        throw profileError;
+      }
+      
+      if (!profiles) {
+        console.error('No profile found for current user');
+        return;
+      }
+      
+      const currentProfileId = profiles.id;
+      
+      // Now fetch only purchases for the current user's profile
       let query = supabase
         .from('purchases')
-        .select('*');
+        .select('*')
+        .eq('user_id', currentProfileId);
 
       // Apply date filter if present
       if (filters?.date) {

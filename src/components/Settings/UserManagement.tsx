@@ -23,6 +23,39 @@ const UserManagement: React.FC = () => {
   const { users, loading, refreshUsers } = useUsers();
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [currentUserProfiles, setCurrentUserProfiles] = useState<User[]>([]);
+  const [loadingProfiles, setLoadingProfiles] = useState(true);
+
+  // Load only profiles owned by the current user
+  React.useEffect(() => {
+    const fetchOwnedProfiles = async () => {
+      try {
+        setLoadingProfiles(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          console.error('User not authenticated');
+          return;
+        }
+        
+        // Filter to only show profiles owned by the current user
+        const ownedProfiles = users.filter(profile => {
+          return profile.owner_id === user.id;
+        });
+        
+        setCurrentUserProfiles(ownedProfiles);
+      } catch (error) {
+        console.error('Error fetching owned profiles:', error);
+        toast.error('Falha ao carregar perfis');
+      } finally {
+        setLoadingProfiles(false);
+      }
+    };
+    
+    if (!loading && users.length > 0) {
+      fetchOwnedProfiles();
+    }
+  }, [users, loading]);
 
 
 
@@ -115,12 +148,16 @@ const UserManagement: React.FC = () => {
 
       <div className="bg-white p-6 rounded-lg shadow">
         <h2 className="text-xl font-semibold mb-4">Lista de Utilizadores</h2>
-        <UserList
-          users={users}
-          onEdit={setEditingUser}
-          onDelete={handleDeleteUser}
-          onSelectSalaryHistory={setSelectedUserId}
-        />
+        {loadingProfiles ? (
+          <div className="p-4 text-gray-600">A carregar perfis de utilizador...</div>
+        ) : (
+          <UserList
+            users={currentUserProfiles}
+            onEdit={setEditingUser}
+            onDelete={handleDeleteUser}
+            onSelectSalaryHistory={setSelectedUserId}
+          />
+        )}
       </div>
 
       {selectedUserId && (

@@ -38,6 +38,11 @@ const AddPurchasePopup: React.FC<AddPurchasePopupProps> = ({
       return;
     }
 
+    if (formData.amount === '' || isNaN(parseFloat(formData.amount)) || parseFloat(formData.amount) <= 0) {
+      toast.error('Por favor insira um valor válido');
+      return;
+    }
+
     if (formData.userIds.length === 0) {
       toast.error('Por favor selecione pelo menos um utilizador');
       return;
@@ -46,25 +51,56 @@ const AddPurchasePopup: React.FC<AddPurchasePopupProps> = ({
     try {
       // Convert amount to negative since it's a purchase (money spent)
       const amount = -Math.abs(parseFloat(formData.amount));
-      const splitAmount = amount / formData.userIds.length;
-
+      
       // Get current user's auth id
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
+      
+      // Get current user's profile
+      const { data: currentUserProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+      
+      if (profileError) throw profileError;
+      if (!currentUserProfile) throw new Error('Perfil de utilizador não encontrado');
+      
+      // Get profiles owned by current user
+      const { data: ownedProfiles, error: ownedProfilesError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('owner_id', user.id);
+      
+      if (ownedProfilesError) throw ownedProfilesError;
+      
+      // Create array of profile IDs this user can add purchases to
+      const allowedProfileIds = ownedProfiles?.map(profile => profile.id) || [];
+      
+      // Only allow purchases for profiles the current user owns
+      const validUserIds = formData.userIds.filter(userId => 
+        allowedProfileIds.includes(userId));
+      
+      if (validUserIds.length === 0) {
+        toast.error('Não tem permissão para adicionar compras a estes utilizadores');
+        return;
+      }
 
-      // Create purchases for each user
+      const splitAmount = amount / validUserIds.length;
+      
+      // Create purchases for each valid user
       const { error } = await supabase
         .from('purchases')
         .insert(
-          formData.userIds.map(userId => ({
-            user_id: userId, // The users view already returns the user_profiles.id
-            owner_id: user.id, // Set owner_id to current user's auth id
+          validUserIds.map(userId => ({
+            user_id: userId, // The profile this purchase belongs to
+            owner_id: user.id, // The auth user who created the purchase
             amount: splitAmount,
             category: formData.category,
             description: formData.description,
             date: formData.date,
             total_amount: Math.abs(amount), // Keep total_amount positive for legacy reasons
-            split_between: formData.userIds.length
+            split_between: validUserIds.length
           }))
         );
 
